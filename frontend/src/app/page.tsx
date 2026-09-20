@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import DigitalTwin from "@/components/DigitalTwin";
 import BlockPlannerView from "@/components/BlockPlannerView";
 import MaintenanceView from "@/components/MaintenanceView";
@@ -10,7 +10,6 @@ import AnalyticsView from "@/components/AnalyticsView";
 import {
   LayoutDashboard,
   Calendar,
-  Activity,
   FlaskConical,
   Wrench,
   ShieldAlert,
@@ -19,6 +18,11 @@ import {
   History,
   CheckCircle2,
   Sparkles,
+  Play,
+  Pause,
+  RotateCcw,
+  Gauge,
+  Clock,
 } from "lucide-react";
 
 interface AIRecommendation {
@@ -38,31 +42,191 @@ interface AIRecommendation {
   details: { metric: string; value: string }[];
 }
 
+interface OperationalState {
+  clock: {
+    operational_date: string;
+    operational_time: string;
+    operational_hm: string;
+    is_running: boolean;
+    speed_multiplier: number;
+  };
+  trains: {
+    id: number;
+    name: string;
+    current_section_id: number;
+    section_name: string;
+    position: number;
+    status: string;
+    is_restricted: boolean;
+  }[];
+  blocks: {
+    id: number;
+    block_code: string;
+    section_id: number;
+    section_name: string;
+    start_time: string;
+    end_time: string;
+    status: string;
+    score: number;
+    departments_count: number;
+    train_impact_minutes: number;
+  }[];
+  kpis: {
+    active_trains_count: number;
+    active_blocks_count: number;
+    approved_blocks_count: number;
+    open_requests_count: number;
+    asset_availability_pct: number;
+    restricted_sections: number[];
+  };
+}
+
+const API_BASE = "http://localhost:8000";
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<
-    "command-center" | "block-planner" | "simulation-lab" | "maintenance" | "assets-risk" | "analytics"
+    "command-center" | "block-planner" | "simulation-lab" | "maintenance" | "analytics"
   >("command-center");
+  const [plannerSubTab, setPlannerSubTab] = useState<
+    "timeline" | "xai" | "risk" | "approvals" | "audit"
+  >("timeline");
 
   const [recommendation, setRecommendation] = useState<AIRecommendation | null>(null);
   const [isApproved, setIsApproved] = useState(false);
   const [approving, setApproving] = useState(false);
 
-  // Fetch live AI recommendation
+  // Operational state from backend
+  const [opState, setOpState] = useState<OperationalState | null>(null);
+  const [clockTime, setClockTime] = useState("--:--:--");
+  const [clockDate, setClockDate] = useState("----");
+  const [clockRunning, setClockRunning] = useState(true);
+  const [clockSpeed, setClockSpeed] = useState(1);
+  const [isConnected, setIsConnected] = useState(false);
+  const sseRef = useRef<EventSource | null>(null);
+
+  // Format date for display
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr + "T00:00:00");
+      return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Fetch initial operational state
+  const fetchOpState = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/operational/state`);
+      if (res.ok) {
+        const data: OperationalState = await res.json();
+        setOpState(data);
+        setClockTime(data.clock.operational_time);
+        setClockDate(data.clock.operational_date);
+        setClockRunning(data.clock.is_running);
+        setClockSpeed(data.clock.speed_multiplier);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch operational state", err);
+    }
+  }, []);
+
+  // Fetch AI recommendation
   useEffect(() => {
-    fetch("http://localhost:8000/api/blocks/recommendation")
+    fetch(`${API_BASE}/api/blocks/recommendation`)
       .then((res) => res.json())
       .then((data) => setRecommendation(data))
       .catch((err) => console.warn("Failed to load recommendation", err));
   }, []);
 
+  // Connect to SSE stream
+  useEffect(() => {
+    fetchOpState();
+
+    const connectSSE = () => {
+      if (sseRef.current) {
+        sseRef.current.close();
+      }
+
+      const es = new EventSource(`${API_BASE}/api/operational/stream`);
+      sseRef.current = es;
+
+      es.onopen = () => {
+        setIsConnected(true);
+      };
+
+      es.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "CLOCK_TICK" && msg.data) {
+            const { clock, trains, active_blocks_count } = msg.data;
+            if (clock) {
+              setClockTime(clock.operational_time);
+              setClockDate(clock.operational_date);
+              setClockRunning(clock.is_running);
+              setClockSpeed(clock.speed_multiplier);
+            }
+            // Update opState trains if we have fresh train data
+            if (trains) {
+              setOpState(prev => prev ? { ...prev, trains, kpis: { ...prev.kpis, active_blocks_count: active_blocks_count ?? prev.kpis.active_blocks_count } } : prev);
+            }
+          } else if (msg.type === "LIFECYCLE_EVENT") {
+            // Re-fetch full state on lifecycle transitions
+            fetchOpState();
+          } else if (msg.type === "CLOCK_CONTROL" && msg.data) {
+            setClockTime(msg.data.operational_time);
+            setClockDate(msg.data.operational_date);
+            setClockRunning(msg.data.is_running);
+            setClockSpeed(msg.data.speed_multiplier);
+          }
+        } catch {
+          // heartbeat or unparseable message
+        }
+      };
+
+      es.onerror = () => {
+        setIsConnected(false);
+        es.close();
+        // Reconnect after 2s
+        setTimeout(connectSSE, 2000);
+      };
+    };
+
+    connectSSE();
+
+    // Also poll operational state every 3 seconds as fallback
+    const pollInterval = setInterval(fetchOpState, 3000);
+
+    return () => {
+      clearInterval(pollInterval);
+      if (sseRef.current) {
+        sseRef.current.close();
+      }
+    };
+  }, [fetchOpState]);
+
+  // Clock control
+  const controlClock = async (action: string, speed?: number) => {
+    try {
+      await fetch(`${API_BASE}/api/operational/clock/control`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, speed }),
+      });
+    } catch (err) {
+      console.error("Clock control error:", err);
+    }
+  };
+
   const handleApprove = async () => {
     setApproving(true);
     try {
-      const res = await fetch("http://localhost:8000/api/blocks/approve", {
+      const res = await fetch(`${API_BASE}/api/blocks/approve`, {
         method: "POST",
       });
       if (res.ok) {
         setIsApproved(true);
+        fetchOpState();
       }
     } catch (e) {
       console.error(e);
@@ -70,6 +234,11 @@ export default function Home() {
       setApproving(false);
     }
   };
+
+  // Dynamic KPI data
+  const kpis = opState?.kpis;
+  const activeBlocksCount = kpis?.active_blocks_count ?? 0;
+  const approvedBlocksCount = kpis?.approved_blocks_count ?? 0;
 
   return (
     <div className="flex h-screen bg-[#F3F4F6] text-slate-900 font-sans">
@@ -106,9 +275,12 @@ export default function Home() {
               </button>
 
               <button
-                onClick={() => setActiveTab("block-planner")}
+                onClick={() => {
+                  setActiveTab("block-planner");
+                  setPlannerSubTab("timeline");
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl font-medium text-sm transition-colors text-left ${
-                  activeTab === "block-planner"
+                  activeTab === "block-planner" && plannerSubTab === "timeline"
                     ? "bg-blue-50 text-blue-700 font-semibold"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
@@ -142,8 +314,15 @@ export default function Home() {
               </button>
 
               <button
-                onClick={() => setActiveTab("block-planner")}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl font-medium text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left"
+                onClick={() => {
+                  setActiveTab("block-planner");
+                  setPlannerSubTab("risk");
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl font-medium text-sm transition-colors text-left ${
+                  activeTab === "block-planner" && plannerSubTab === "risk"
+                    ? "bg-blue-50 text-blue-700 font-semibold"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
               >
                 <ShieldAlert size={18} />
                 Assets & Risk
@@ -157,8 +336,15 @@ export default function Home() {
             </h2>
             <nav className="space-y-1">
               <button
-                onClick={() => setActiveTab("block-planner")}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl font-medium text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left"
+                onClick={() => {
+                  setActiveTab("block-planner");
+                  setPlannerSubTab("approvals");
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl font-medium text-sm transition-colors text-left ${
+                  activeTab === "block-planner" && plannerSubTab === "approvals"
+                    ? "bg-blue-50 text-blue-700 font-semibold"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
               >
                 <CheckSquare size={18} />
                 Approvals
@@ -175,9 +361,12 @@ export default function Home() {
                 30-Day Analytics & ML
               </button>
               <button
-                onClick={() => setActiveTab("analytics")}
+                onClick={() => {
+                  setActiveTab("block-planner");
+                  setPlannerSubTab("audit");
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl font-medium text-sm transition-colors text-left ${
-                  activeTab === "analytics"
+                  activeTab === "block-planner" && plannerSubTab === "audit"
                     ? "bg-blue-50 text-blue-700 font-semibold"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
@@ -193,7 +382,7 @@ export default function Home() {
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          {/* Top Header */}
+          {/* Top Header with Operational Clock */}
           <header className="flex justify-between items-end mb-8">
             <div>
               <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
@@ -211,15 +400,65 @@ export default function Home() {
                 {activeTab === "analytics" && "Calibrated on 1,320 actual IR train journeys, 121 corridor possessions, and Random Forest delay predictions."}
               </p>
             </div>
-            <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              LIVE
-              <span className="ml-2 pl-2 border-l border-slate-300 font-mono">17 Sep 2026 - 19:40 IST</span>
+
+            {/* Authoritative Operational Clock Bar */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Clock Display */}
+              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2 shadow-sm">
+                <Clock size={15} className="text-slate-400" />
+                <div className="text-right">
+                  <div className="text-lg font-bold font-mono text-slate-900 leading-none tracking-tight">
+                    {clockTime}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
+                    {formatDate(clockDate)} IST
+                  </div>
+                </div>
+              </div>
+
+              {/* Clock Controls */}
+              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-2xl px-2 py-1.5 shadow-sm">
+                <button
+                  onClick={() => controlClock(clockRunning ? "PAUSE" : "RESUME")}
+                  className={`p-1.5 rounded-lg transition-colors ${clockRunning ? "hover:bg-amber-50 text-amber-600" : "hover:bg-emerald-50 text-emerald-600"}`}
+                  title={clockRunning ? "Pause" : "Resume"}
+                >
+                  {clockRunning ? <Pause size={14} /> : <Play size={14} />}
+                </button>
+                <button
+                  onClick={() => controlClock("RESET")}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+                  title="Reset to 14:30"
+                >
+                  <RotateCcw size={14} />
+                </button>
+                <div className="w-px h-5 bg-slate-200 mx-1" />
+                {[1, 5, 10, 60].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => controlClock("SPEED", s)}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${
+                      clockSpeed === s
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-500 hover:bg-slate-100"
+                    }`}
+                    title={`${s}x speed`}
+                  >
+                    {s}x
+                  </button>
+                ))}
+              </div>
+
+              {/* Connection Status */}
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500 animate-pulse" : "bg-red-400"}`} />
+                {isConnected ? "LIVE" : "OFFLINE"}
+              </div>
             </div>
           </header>
 
           {/* Conditional View Rendering */}
-          {activeTab === "block-planner" && <BlockPlannerView />}
+          {activeTab === "block-planner" && <BlockPlannerView initialSubTab={plannerSubTab} />}
           {activeTab === "maintenance" && <MaintenanceView />}
           {activeTab === "simulation-lab" && <SimulationLabView />}
           {activeTab === "analytics" && <AnalyticsView />}
@@ -227,15 +466,15 @@ export default function Home() {
           {activeTab === "command-center" && (
 
             <>
-              {/* KPI Cards */}
+              {/* KPI Cards — dynamically connected */}
               <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                  { label: "Active Trains", value: "4 Live", metric: "Continuous Sim", color: "text-blue-600 bg-blue-50" },
-                  { label: "Open Requests", value: "4 Active", metric: "3 Depts", color: "text-amber-600 bg-amber-50" },
-                  { label: "Safe Conflicts", value: "0 Severe", metric: "All Validated", color: "text-emerald-600 bg-emerald-50" },
-                  { label: "Asset Availability", value: "96.4%", metric: "+2.1%", color: "text-emerald-600 bg-emerald-50" },
-                  { label: "Blocks Optimized", value: "4 Corridors", metric: "Today", color: "text-slate-600 bg-slate-100" },
-                  { label: "On-time Impact", value: "-12 min", metric: "vs baseline", color: "text-blue-600 bg-blue-50" },
+                  { label: "Active Trains", value: `${kpis?.active_trains_count ?? 4} Live`, metric: clockRunning ? "Running" : "Paused", color: "text-blue-600 bg-blue-50" },
+                  { label: "Open Requests", value: `${kpis?.open_requests_count ?? 4} Active`, metric: "Multi-Dept", color: "text-amber-600 bg-amber-50" },
+                  { label: "Active Blocks", value: activeBlocksCount > 0 ? `${activeBlocksCount} Active` : "None", metric: activeBlocksCount > 0 ? "Section Restricted" : "All Clear", color: activeBlocksCount > 0 ? "text-amber-600 bg-amber-50" : "text-emerald-600 bg-emerald-50" },
+                  { label: "Asset Availability", value: `${kpis?.asset_availability_pct ?? 96.4}%`, metric: activeBlocksCount === 0 ? "+2.1%" : "Restricted", color: "text-emerald-600 bg-emerald-50" },
+                  { label: "Approved Blocks", value: `${approvedBlocksCount} Queued`, metric: "Pending Activation", color: "text-slate-600 bg-slate-100" },
+                  { label: "Clock Speed", value: `${clockSpeed}x`, metric: clockRunning ? "Simulating" : "Paused", color: "text-blue-600 bg-blue-50" },
                 ].map((kpi, idx) => (
                   <div key={idx} className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col shadow-sm">
                     <span className="text-slate-500 text-sm font-medium">{kpi.label}</span>
@@ -259,28 +498,27 @@ export default function Home() {
                       <p className="text-sm text-slate-500">Live digital-twin state · Central Corridor</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">
-                        2 ACTIVE BLOCKS
-                      </span>
+                      {activeBlocksCount > 0 ? (
+                        <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">
+                          {activeBlocksCount} ACTIVE BLOCK{activeBlocksCount > 1 ? "S" : ""}
+                        </span>
+                      ) : approvedBlocksCount > 0 ? (
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full">
+                          {approvedBlocksCount} APPROVED
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
+                          ALL CLEAR
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex-1 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100 relative min-h-[420px]">
-                    <DigitalTwin />
-                    {/* Digital twin legend overlay */}
-                    <div className="absolute bottom-4 left-4 flex gap-3 z-10 pointer-events-none">
-                      <span className="flex items-center gap-1.5 text-xs font-medium bg-white/90 px-2.5 py-1 rounded-lg shadow-sm border border-slate-200 backdrop-blur">
-                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Train
-                      </span>
-                      <span className="flex items-center gap-1.5 text-xs font-medium bg-white/90 px-2.5 py-1 rounded-lg shadow-sm border border-slate-200 backdrop-blur">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Maintenance
-                      </span>
-                      <span className="flex items-center gap-1.5 text-xs font-medium bg-white/90 px-2.5 py-1 rounded-lg shadow-sm border border-slate-200 backdrop-blur">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Safe
-                      </span>
-                      <span className="flex items-center gap-1.5 text-xs font-medium bg-white/90 px-2.5 py-1 rounded-lg shadow-sm border border-slate-200 backdrop-blur">
-                        <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Conflict
-                      </span>
-                    </div>
+                  <div className="flex-1 rounded-2xl overflow-hidden min-h-[460px]">
+                    <DigitalTwin
+                      operationalTrains={opState?.trains}
+                      operationalBlocks={opState?.blocks}
+                      operationalTime={clockTime}
+                    />
                   </div>
                 </section>
 

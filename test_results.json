@@ -135,7 +135,7 @@
       {
         "name": "12124 Deccan Queen",
         "current_section_id": 2,
-        "position": 0.2,
+        "position": 0.867,
         "status": "RUNNING",
         "id": 1,
         "current_section": {
@@ -149,7 +149,7 @@
       {
         "name": "12028 Shatabdi Exp",
         "current_section_id": 2,
-        "position": 0.44,
+        "position": 0.099,
         "status": "RUNNING",
         "id": 2,
         "current_section": {
@@ -163,7 +163,7 @@
       {
         "name": "11019 Konark Exp",
         "current_section_id": 5,
-        "position": 0.68,
+        "position": 0.371,
         "status": "RUNNING",
         "id": 3,
         "current_section": {
@@ -177,7 +177,7 @@
       {
         "name": "12157 Hutatma Exp",
         "current_section_id": 5,
-        "position": 0.92,
+        "position": 0.611,
         "status": "RUNNING",
         "id": 4,
         "current_section": {
@@ -199,28 +199,28 @@
           "id": 1,
           "name": "12124 Deccan Queen",
           "current_section_id": 2,
-          "position": 0.24,
+          "position": 0.907,
           "status": "RUNNING"
         },
         {
           "id": 2,
           "name": "12028 Shatabdi Exp",
           "current_section_id": 2,
-          "position": 0.48,
+          "position": 0.139,
           "status": "RUNNING"
         },
         {
           "id": 3,
           "name": "11019 Konark Exp",
           "current_section_id": 5,
-          "position": 0.72,
+          "position": 0.411,
           "status": "RUNNING"
         },
         {
           "id": 4,
           "name": "12157 Hutatma Exp",
           "current_section_id": 5,
-          "position": 0.96,
+          "position": 0.651,
           "status": "RUNNING"
         }
       ]
@@ -429,6 +429,68 @@
         "created_at": "2026-09-18T11:21:16.058834",
         "department": null,
         "section": null
+      },
+      {
+        "department_id": 1,
+        "section_id": 1,
+        "description": "QA Rail Grind",
+        "priority": "HIGH",
+        "duration_minutes": 90,
+        "id": 11,
+        "created_at": "2026-09-20T10:13:32.220671",
+        "department": {
+          "name": "Engineering (Track)",
+          "id": 1
+        },
+        "section": {
+          "name": "Pune-Lonavala",
+          "start_station_id": 1,
+          "end_station_id": 2,
+          "length_km": 64.0,
+          "id": 1
+        }
+      },
+      {
+        "department_id": 99999,
+        "section_id": 99999,
+        "description": "FK test",
+        "priority": "HIGH",
+        "duration_minutes": 90,
+        "id": 12,
+        "created_at": "2026-09-20T10:13:32.255982",
+        "department": null,
+        "section": null
+      },
+      {
+        "department_id": 1,
+        "section_id": 1,
+        "description": "QA Rail Grind",
+        "priority": "HIGH",
+        "duration_minutes": 90,
+        "id": 13,
+        "created_at": "2026-09-20T10:18:38.403001",
+        "department": {
+          "name": "Engineering (Track)",
+          "id": 1
+        },
+        "section": {
+          "name": "Pune-Lonavala",
+          "start_station_id": 1,
+          "end_station_id": 2,
+          "length_km": 64.0,
+          "id": 1
+        }
+      },
+      {
+        "department_id": 99999,
+        "section_id": 99999,
+        "description": "FK test",
+        "priority": "HIGH",
+        "duration_minutes": 90,
+        "id": 14,
+        "created_at": "2026-09-20T10:18:38.417506",
+        "department": null,
+        "section": null
       }
     ]
   },
@@ -440,8 +502,8 @@
       "description": "QA Rail Grind",
       "priority": "HIGH",
       "duration_minutes": 90,
-      "id": 11,
-      "created_at": "2026-09-20T10:13:32.220671",
+      "id": 15,
+      "created_at": "2026-09-20T11:23:54.980056",
       "department": {
         "name": "Engineering (Track)",
         "id": 1
@@ -456,18 +518,8 @@
     }
   },
   "task_post_invalid_dept": {
-    "status": 200,
-    "data": {
-      "department_id": 99999,
-      "section_id": 99999,
-      "description": "FK test",
-      "priority": "HIGH",
-      "duration_minutes": 90,
-      "id": 12,
-      "created_at": "2026-09-20T10:13:32.255982",
-      "department": null,
-      "section": null
-    }
+    "status": 500,
+    "data": "Internal Server Error"
   },
   "block_rec": {
     "status": 200,
@@ -481,7 +533,7 @@
       "score": 97,
       "train_impact_minutes": 8,
       "departments_count": 3,
-      "priority_jobs": "6 high \u00b7 1 medium",
+      "priority_jobs": "8 high \u00b7 1 medium",
       "safety_gate_passed": 1,
       "safety_status": "PASSED",
       "rationale": "Low traffic + joint work + no route conflict.",
@@ -496,7 +548,7 @@
         },
         {
           "metric": "Priority jobs",
-          "value": "6 high \u00b7 1 medium"
+          "value": "8 high \u00b7 1 medium"
         },
         {
           "metric": "Resources",
@@ -515,7 +567,7 @@
       "section_id": 1,
       "section_name": "Pune-Lonavala",
       "active_trains_count": 1,
-      "maintenance_tasks_count": 7,
+      "maintenance_tasks_count": 9,
       "coordinated_departments": [
         "Engineering (Track)",
         "S&T (Signalling & Telecom)",
@@ -538,10 +590,10 @@
       "status": "SUCCESS",
       "action": "APPROVED",
       "block_code": "Block A-17",
-      "digital_signature": "IR-SIG-38EDCB2F2FEEFF9597B1CC8B",
+      "digital_signature": "IR-SIG-A2A2417951BFDFD53C18FC54",
       "performed_by": "Chief Operations Controller, Pune Division",
-      "timestamp": "2026-09-20T10:13:32.313598",
-      "audit_id": 3,
+      "timestamp": "2026-09-20T11:23:55.141975",
+      "audit_id": 8,
       "message": "Block Block A-17 officially approved with cryptographic audit log entry."
     }
   },
@@ -554,10 +606,10 @@
         "start_time": "02:00",
         "end_time": "05:00",
         "duration_minutes": 180,
-        "score": 92,
+        "score": 97,
         "train_impact_minutes": 8,
         "departments_count": 3,
-        "priority_jobs": "2 high \u00b7 1 medium",
+        "priority_jobs": "8 high \u00b7 1 medium",
         "safety_gate_passed": 1,
         "rationale": "Approved by Chief Controller.",
         "status": "APPROVED",
@@ -3109,16 +3161,76 @@
       "status": "SUCCESS",
       "action": "APPROVED",
       "block_code": "Block A-17",
-      "digital_signature": "IR-SIG-4C52A323A558A0B37ABDDCBA",
+      "digital_signature": "IR-SIG-9F07FC4AE9464C21890C631F",
       "performed_by": "Chief Operations Controller",
-      "timestamp": "2026-09-20T10:13:34.683958",
-      "audit_id": 4,
+      "timestamp": "2026-09-20T11:23:58.346451",
+      "audit_id": 9,
       "message": "Block Block A-17 officially approved with cryptographic audit log entry."
     }
   },
   "phase4_audit_trail": {
     "status": 200,
     "data": [
+      {
+        "id": 9,
+        "block_code": "Block A-17",
+        "action": "APPROVED",
+        "performed_by": "Chief Operations Controller",
+        "user_role": "Chief Controller",
+        "timestamp": "2026-09-20T11:23:58.346451",
+        "digital_signature": "IR-SIG-9F07FC4AE9464C21890C631F",
+        "remarks": "Automated QA suite verified",
+        "safety_gate_status": "PASSED",
+        "details_json": "{\"block_code\": \"Block A-17\", \"section_id\": 1, \"start_time\": \"02:00\", \"end_time\": \"05:00\", \"duration_minutes\": 180, \"departments_count\": 3, \"train_impact_minutes\": 8, \"safety_gate\": \"PASSED\", \"emergency_override\": false}"
+      },
+      {
+        "id": 8,
+        "block_code": "Block A-17",
+        "action": "APPROVED",
+        "performed_by": "Chief Operations Controller, Pune Division",
+        "user_role": "Chief Controller",
+        "timestamp": "2026-09-20T11:23:55.141975",
+        "digital_signature": "IR-SIG-A2A2417951BFDFD53C18FC54",
+        "remarks": "Approved via Quick Action.",
+        "safety_gate_status": "PASSED",
+        "details_json": "{\"block_code\": \"Block A-17\", \"section_id\": 1, \"start_time\": \"02:00\", \"end_time\": \"05:00\", \"duration_minutes\": 180, \"departments_count\": 3, \"train_impact_minutes\": 8, \"safety_gate\": \"PASSED\", \"emergency_override\": false}"
+      },
+      {
+        "id": 7,
+        "block_code": "Block A-17",
+        "action": "REQUEST_CREATED",
+        "performed_by": "Maintenance Engineer (Engineering (Track))",
+        "user_role": "Department Engineer",
+        "timestamp": "2026-09-20T11:23:55.015845",
+        "digital_signature": "IR-REQ-0015",
+        "remarks": "New demand: QA Rail Grind (PriorityEnum.HIGH Priority, 90m).",
+        "safety_gate_status": "QUEUED_FOR_AI_OPTIMIZATION",
+        "details_json": "{\"task_id\": 15, \"section_id\": 1, \"priority\": \"HIGH\", \"duration\": 90}"
+      },
+      {
+        "id": 6,
+        "block_code": "Block A-17",
+        "action": "APPROVED",
+        "performed_by": "Chief Operations Controller",
+        "user_role": "Chief Controller",
+        "timestamp": "2026-09-20T10:18:39.339744",
+        "digital_signature": "IR-SIG-C54734307A11328A69FD06B5",
+        "remarks": "Automated QA suite verified",
+        "safety_gate_status": "PASSED",
+        "details_json": "{\"block_code\": \"Block A-17\", \"section_id\": 1, \"start_time\": \"02:00\", \"end_time\": \"05:00\", \"duration_minutes\": 180, \"departments_count\": 3, \"train_impact_minutes\": 8, \"safety_gate\": \"PASSED\", \"emergency_override\": false}"
+      },
+      {
+        "id": 5,
+        "block_code": "Block A-17",
+        "action": "APPROVED",
+        "performed_by": "Chief Operations Controller, Pune Division",
+        "user_role": "Chief Controller",
+        "timestamp": "2026-09-20T10:18:38.483563",
+        "digital_signature": "IR-SIG-52D5B50A902D7C163F8098DF",
+        "remarks": "Approved via Quick Action.",
+        "safety_gate_status": "PASSED",
+        "details_json": "{\"block_code\": \"Block A-17\", \"section_id\": 1, \"start_time\": \"02:00\", \"end_time\": \"05:00\", \"duration_minutes\": 180, \"departments_count\": 3, \"train_impact_minutes\": 8, \"safety_gate\": \"PASSED\", \"emergency_override\": false}"
+      },
       {
         "id": 4,
         "block_code": "Block A-17",

@@ -141,4 +141,22 @@ class AssetConditionHistory(Base):
 
     section = relationship("RailwaySection")
 
+class ApprovalAuditLog(Base):
+    __tablename__ = "approval_audit_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    block_code = Column(String, index=True)
+    action = Column(String) # "APPROVED", "REJECTED", "MODIFIED", "EMERGENCY_OVERRIDE", "SUBMITTED"
+    performed_by = Column(String) # e.g. "Sr. DOM (Pune Division)"
+    user_role = Column(String) # e.g. "Chief Operations Controller"
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    digital_signature = Column(String) # SHA-256 HMAC cryptographic signature
+    remarks = Column(String)
+    safety_gate_status = Column(String, default="PASSED")
+    details_json = Column(String, nullable=True)
+
+class SystemState(Base):
+    __tablename__ = "system_state"
+    key = Column(String, primary_key=True, index=True)
+    value = Column(String)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

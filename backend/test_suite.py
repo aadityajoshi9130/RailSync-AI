@@ -71,6 +71,15 @@ test_ep('analytics_audit', 'GET', '/api/analytics/audit-history')
 test_ep('analytics_predict', 'POST', '/api/analytics/predict-delay', json_data={'section_id': 1, 'departure_hour': 10, 'day_of_week': 2, 'has_active_block': 1, 'is_vande_bharat': 1})
 test_ep('analytics_predict_bad', 'POST', '/api/analytics/predict-delay', json_data={'departure_hour': 'bad_hour'})
 
+# 7. Phase 4 AI & Explainable AI (XAI)
+test_ep('phase4_explain_xai', 'GET', '/api/blocks/explain-recommendation/Block%20A-17')
+test_ep('phase4_feature_importance', 'GET', '/api/blocks/feature-importance')
+test_ep('phase4_predict_risk', 'POST', '/api/blocks/predict-risk', json_data={'section_id': 2, 'duration_minutes': 180, 'departments_count': 3, 'start_hour': 2})
+
+# 8. Phase 4 Human Approval & Cryptographic Audit Trail
+test_ep('phase4_approve_workflow', 'POST', '/api/blocks/approve-workflow', json_data={'block_code': 'Block A-17', 'section_id': 1, 'action': 'APPROVED', 'performed_by': 'Chief Operations Controller', 'user_role': 'Chief Controller', 'remarks': 'Automated QA suite verified'})
+test_ep('phase4_audit_trail', 'GET', '/api/blocks/audit-trail')
+
 with open('test_results.json', 'w') as f:
     json.dump(results, f, indent=2)
 

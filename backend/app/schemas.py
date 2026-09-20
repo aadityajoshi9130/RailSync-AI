@@ -104,4 +104,41 @@ class BlockPlan(BlockPlanBase):
     class Config:
         from_attributes = True
 
+# --- Approval & Audit Schemas (Phase 4) ---
+class ApprovalWorkflowRequest(BaseModel):
+    block_code: str = "Block A-17"
+    section_id: int = 1
+    action: str = "APPROVED"  # APPROVED, REJECTED, MODIFIED
+    performed_by: str = "Chief Operations Controller (Sr. DOM), Pune Division"
+    user_role: str = "Chief Controller"
+    remarks: str = "All safety clearance criteria verified. Joint block approved for Track + OHE + S&T."
+    emergency_override: bool = False
 
+class ApprovalAuditLogResponse(BaseModel):
+    id: int
+    block_code: str
+    action: str
+    performed_by: str
+    user_role: str
+    timestamp: datetime
+    digital_signature: str
+    remarks: str
+    safety_gate_status: str
+    details_json: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+# --- ML & Prediction Schemas (Phase 4) ---
+class MLDelayPredictRequest(BaseModel):
+    section_id: int = 1
+    departure_hour: int = 14
+    day_of_week: int = 2
+    has_active_block: int = 0
+    is_vande_bharat: int = 0
+    is_freight: int = 0
+
+class MLBlockRiskRequest(BaseModel):
+    section_id: int = 1
+    duration_minutes: int = 180
+    departments_count: int = 3
+    start_hour: int = 2
