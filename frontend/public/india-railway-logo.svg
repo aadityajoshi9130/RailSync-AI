@@ -1,0 +1,16 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="80" cy="80" r="70" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="4"/>
+  <circle cx="80" cy="80" r="58" fill="#FFFFFF"/>
+  <path d="M44 57C52 50 61 48 80 48C99 48 108 50 116 57L109 72H51L44 57Z" fill="#FF9933"/>
+  <path d="M51 72H109V83C109 95 101 105 89 108L80 111L71 108C59 105 51 95 51 83V72Z" fill="#FFFFFF"/>
+  <path d="M46 94H114L101 108H59L46 94Z" fill="#138808"/>
+  <path d="M58 63H102C104 63 106 64 108 66L103 80H57L52 66C54 64 56 63 58 63Z" fill="#FFFFFF"/>
+  <path d="M62 84H98V92C98 97 93 101 88 101H72C67 101 62 97 62 92V84Z" fill="#1D4ED8"/>
+  <rect x="65" y="90" width="30" height="6" rx="3" fill="#F8FAFC"/>
+  <rect x="34" y="104" width="92" height="7" rx="3.5" fill="#1F2937" opacity="0.9"/>
+  <circle cx="80" cy="80" r="5" fill="#1D4ED8"/>
+  <circle cx="80" cy="80" r="18" stroke="#1D4ED8" stroke-width="2.5"/>
+  <path d="M54 118C62 113 70 110 80 110C90 110 98 113 106 118" stroke="#FF9933" stroke-width="4" stroke-linecap="round"/>
+  <path d="M44 57C52 50 61 48 80 48C99 48 108 50 116 57" stroke="#138808" stroke-width="4" stroke-linecap="round"/>
+  <path d="M58 46L80 28L102 46" stroke="#1D4ED8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

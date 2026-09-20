@@ -1,0 +1,1904 @@
+{
+  "root": {
+    "status": 200,
+    "data": {
+      "message": "Welcome to RAILTWIN AI API"
+    }
+  },
+  "health": {
+    "status": 200,
+    "data": {
+      "status": "healthy"
+    }
+  },
+  "stations_get": {
+    "status": 200,
+    "data": [
+      {
+        "name": "Pune",
+        "code": "PUNE",
+        "id": 1
+      },
+      {
+        "name": "Lonavala",
+        "code": "LNL",
+        "id": 2
+      },
+      {
+        "name": "Karjat",
+        "code": "KJT",
+        "id": 3
+      },
+      {
+        "name": "Daund",
+        "code": "DD",
+        "id": 4
+      },
+      {
+        "name": "Solapur",
+        "code": "SUR",
+        "id": 5
+      },
+      {
+        "name": "Kurduvadi",
+        "code": "KWV",
+        "id": 6
+      },
+      {
+        "name": "Test Junction",
+        "code": "TJ",
+        "id": 7
+      },
+      {
+        "name": "' OR '1'='1",
+        "code": "';--",
+        "id": 8
+      }
+    ]
+  },
+  "sections_get": {
+    "status": 200,
+    "data": [
+      {
+        "name": "Pune-Lonavala",
+        "start_station_id": 1,
+        "end_station_id": 2,
+        "length_km": 64.0,
+        "id": 1
+      },
+      {
+        "name": "Lonavala-Karjat",
+        "start_station_id": 2,
+        "end_station_id": 3,
+        "length_km": 28.0,
+        "id": 2
+      },
+      {
+        "name": "Pune-Daund",
+        "start_station_id": 1,
+        "end_station_id": 4,
+        "length_km": 75.0,
+        "id": 3
+      },
+      {
+        "name": "Daund-Solapur",
+        "start_station_id": 4,
+        "end_station_id": 5,
+        "length_km": 187.0,
+        "id": 4
+      },
+      {
+        "name": "Solapur-Kurduvadi",
+        "start_station_id": 5,
+        "end_station_id": 6,
+        "length_km": 79.0,
+        "id": 5
+      },
+      {
+        "name": "Lonavala-Solapur",
+        "start_station_id": 2,
+        "end_station_id": 5,
+        "length_km": 250.0,
+        "id": 6
+      }
+    ]
+  },
+  "station_post_valid": {
+    "status": 500,
+    "data": "Internal Server Error"
+  },
+  "station_post_invalid": {
+    "status": 422,
+    "data": {
+      "detail": [
+        {
+          "type": "missing",
+          "loc": [
+            "body",
+            "code"
+          ],
+          "msg": "Field required",
+          "input": {
+            "name": "Bad"
+          }
+        }
+      ]
+    }
+  },
+  "station_post_sqli": {
+    "status": 500,
+    "data": "Internal Server Error"
+  },
+  "trains_get": {
+    "status": 200,
+    "data": [
+      {
+        "name": "12124 Deccan Queen",
+        "current_section_id": 2,
+        "position": 0.24,
+        "status": "RUNNING",
+        "id": 1,
+        "current_section": {
+          "name": "Lonavala-Karjat",
+          "start_station_id": 2,
+          "end_station_id": 3,
+          "length_km": 28.0,
+          "id": 2
+        }
+      },
+      {
+        "name": "12028 Shatabdi Exp",
+        "current_section_id": 2,
+        "position": 0.48,
+        "status": "RUNNING",
+        "id": 2,
+        "current_section": {
+          "name": "Lonavala-Karjat",
+          "start_station_id": 2,
+          "end_station_id": 3,
+          "length_km": 28.0,
+          "id": 2
+        }
+      },
+      {
+        "name": "11019 Konark Exp",
+        "current_section_id": 5,
+        "position": 0.72,
+        "status": "RUNNING",
+        "id": 3,
+        "current_section": {
+          "name": "Solapur-Kurduvadi",
+          "start_station_id": 5,
+          "end_station_id": 6,
+          "length_km": 79.0,
+          "id": 5
+        }
+      },
+      {
+        "name": "12157 Hutatma Exp",
+        "current_section_id": 5,
+        "position": 0.96,
+        "status": "RUNNING",
+        "id": 4,
+        "current_section": {
+          "name": "Solapur-Kurduvadi",
+          "start_station_id": 5,
+          "end_station_id": 6,
+          "length_km": 79.0,
+          "id": 5
+        }
+      }
+    ]
+  },
+  "train_simulate_step": {
+    "status": 200,
+    "data": {
+      "status": "success",
+      "updated_trains": [
+        {
+          "id": 1,
+          "name": "12124 Deccan Queen",
+          "current_section_id": 2,
+          "position": 0.28,
+          "status": "RUNNING"
+        },
+        {
+          "id": 2,
+          "name": "12028 Shatabdi Exp",
+          "current_section_id": 2,
+          "position": 0.52,
+          "status": "RUNNING"
+        },
+        {
+          "id": 3,
+          "name": "11019 Konark Exp",
+          "current_section_id": 5,
+          "position": 0.76,
+          "status": "RUNNING"
+        },
+        {
+          "id": 4,
+          "name": "12157 Hutatma Exp",
+          "current_section_id": 5,
+          "position": 0.0,
+          "status": "RUNNING"
+        }
+      ]
+    }
+  },
+  "train_reset": {
+    "status": 200,
+    "data": {
+      "status": "success",
+      "message": "Trains reset"
+    }
+  },
+  "depts_get": {
+    "status": 200,
+    "data": [
+      {
+        "name": "Engineering (Track)",
+        "id": 1
+      },
+      {
+        "name": "OHE / Traction",
+        "id": 2
+      },
+      {
+        "name": "S&T (Signalling & Telecom)",
+        "id": 3
+      },
+      {
+        "name": "Operations",
+        "id": 4
+      }
+    ]
+  },
+  "tasks_get": {
+    "status": 200,
+    "data": [
+      {
+        "department_id": 1,
+        "section_id": 1,
+        "description": "Track tamping & ballast cleaning km 112-116",
+        "priority": "HIGH",
+        "duration_minutes": 180,
+        "id": 1,
+        "created_at": "2026-09-17T13:58:55.048729",
+        "department": {
+          "name": "Engineering (Track)",
+          "id": 1
+        },
+        "section": {
+          "name": "Pune-Lonavala",
+          "start_station_id": 1,
+          "end_station_id": 2,
+          "length_km": 64.0,
+          "id": 1
+        }
+      },
+      {
+        "department_id": 2,
+        "section_id": 1,
+        "description": "OHE contact wire inspection & bracket renewal",
+        "priority": "HIGH",
+        "duration_minutes": 150,
+        "id": 2,
+        "created_at": "2026-09-17T13:58:55.048733",
+        "department": {
+          "name": "OHE / Traction",
+          "id": 2
+        },
+        "section": {
+          "name": "Pune-Lonavala",
+          "start_station_id": 1,
+          "end_station_id": 2,
+          "length_km": 64.0,
+          "id": 1
+        }
+      },
+      {
+        "department_id": 3,
+        "section_id": 1,
+        "description": "Axle counter calibration & point machine test",
+        "priority": "MEDIUM",
+        "duration_minutes": 120,
+        "id": 3,
+        "created_at": "2026-09-17T13:58:55.048735",
+        "department": {
+          "name": "S&T (Signalling & Telecom)",
+          "id": 3
+        },
+        "section": {
+          "name": "Pune-Lonavala",
+          "start_station_id": 1,
+          "end_station_id": 2,
+          "length_km": 64.0,
+          "id": 1
+        }
+      },
+      {
+        "department_id": 1,
+        "section_id": 4,
+        "description": "Ultrasonic rail flaw detection (USFD)",
+        "priority": "MEDIUM",
+        "duration_minutes": 120,
+        "id": 4,
+        "created_at": "2026-09-17T13:58:55.048736",
+        "department": {
+          "name": "Engineering (Track)",
+          "id": 1
+        },
+        "section": {
+          "name": "Daund-Solapur",
+          "start_station_id": 4,
+          "end_station_id": 5,
+          "length_km": 187.0,
+          "id": 4
+        }
+      },
+      {
+        "department_id": 1,
+        "section_id": 1,
+        "description": "QA Rail Grind",
+        "priority": "HIGH",
+        "duration_minutes": 90,
+        "id": 5,
+        "created_at": "2026-09-17T14:59:22.563861",
+        "department": {
+          "name": "Engineering (Track)",
+          "id": 1
+        },
+        "section": {
+          "name": "Pune-Lonavala",
+          "start_station_id": 1,
+          "end_station_id": 2,
+          "length_km": 64.0,
+          "id": 1
+        }
+      },
+      {
+        "department_id": 99999,
+        "section_id": 99999,
+        "description": "FK test",
+        "priority": "HIGH",
+        "duration_minutes": 90,
+        "id": 6,
+        "created_at": "2026-09-17T14:59:24.636095",
+        "department": null,
+        "section": null
+      },
+      {
+        "department_id": 1,
+        "section_id": 1,
+        "description": "QA Rail Grind",
+        "priority": "HIGH",
+        "duration_minutes": 90,
+        "id": 7,
+        "created_at": "2026-09-18T10:39:43.936887",
+        "department": {
+          "name": "Engineering (Track)",
+          "id": 1
+        },
+        "section": {
+          "name": "Pune-Lonavala",
+          "start_station_id": 1,
+          "end_station_id": 2,
+          "length_km": 64.0,
+          "id": 1
+        }
+      },
+      {
+        "department_id": 99999,
+        "section_id": 99999,
+        "description": "FK test",
+        "priority": "HIGH",
+        "duration_minutes": 90,
+        "id": 8,
+        "created_at": "2026-09-18T10:39:43.968070",
+        "department": null,
+        "section": null
+      }
+    ]
+  },
+  "task_post_valid": {
+    "status": 200,
+    "data": {
+      "department_id": 1,
+      "section_id": 1,
+      "description": "QA Rail Grind",
+      "priority": "HIGH",
+      "duration_minutes": 90,
+      "id": 9,
+      "created_at": "2026-09-18T11:21:16.046762",
+      "department": {
+        "name": "Engineering (Track)",
+        "id": 1
+      },
+      "section": {
+        "name": "Pune-Lonavala",
+        "start_station_id": 1,
+        "end_station_id": 2,
+        "length_km": 64.0,
+        "id": 1
+      }
+    }
+  },
+  "task_post_invalid_dept": {
+    "status": 200,
+    "data": {
+      "department_id": 99999,
+      "section_id": 99999,
+      "description": "FK test",
+      "priority": "HIGH",
+      "duration_minutes": 90,
+      "id": 10,
+      "created_at": "2026-09-18T11:21:16.058834",
+      "department": null,
+      "section": null
+    }
+  },
+  "block_rec": {
+    "status": 200,
+    "data": {
+      "block_code": "Block A-17",
+      "section_id": 1,
+      "section_name": "Pune-Lonavala",
+      "start_time": "02:00",
+      "end_time": "05:00",
+      "duration_minutes": 180,
+      "score": 97,
+      "train_impact_minutes": 8,
+      "departments_count": 3,
+      "priority_jobs": "5 high \u00b7 1 medium",
+      "safety_gate_passed": 1,
+      "safety_status": "PASSED",
+      "rationale": "Low traffic + joint work + no route conflict.",
+      "details": [
+        {
+          "metric": "Train impact",
+          "value": "8 min"
+        },
+        {
+          "metric": "Departments",
+          "value": "3 coordinated"
+        },
+        {
+          "metric": "Priority jobs",
+          "value": "5 high \u00b7 1 medium"
+        },
+        {
+          "metric": "Resources",
+          "value": "Available"
+        },
+        {
+          "metric": "Safety gate",
+          "value": "PASSED"
+        }
+      ]
+    }
+  },
+  "block_conflicts": {
+    "status": 200,
+    "data": {
+      "section_id": 1,
+      "section_name": "Pune-Lonavala",
+      "active_trains_count": 1,
+      "maintenance_tasks_count": 6,
+      "coordinated_departments": [
+        "Engineering (Track)",
+        "S&T (Signalling & Telecom)",
+        "OHE / Traction"
+      ],
+      "conflicts": [],
+      "safety_gate_passed": true,
+      "safe_for_block": true
+    }
+  },
+  "block_conflicts_invalid_sec": {
+    "status": 200,
+    "data": {
+      "error": "Section not found"
+    }
+  },
+  "block_approve": {
+    "status": 200,
+    "data": {
+      "status": "success",
+      "message": "Block A-17 approved successfully!",
+      "block": "Block A-17"
+    }
+  },
+  "blocks_list": {
+    "status": 200,
+    "data": [
+      {
+        "block_code": "Block A-17",
+        "section_id": 1,
+        "start_time": "02:00",
+        "end_time": "05:00",
+        "duration_minutes": 180,
+        "score": 92,
+        "train_impact_minutes": 8,
+        "departments_count": 3,
+        "priority_jobs": "2 high \u00b7 1 medium",
+        "safety_gate_passed": 1,
+        "rationale": "Approved by Chief Controller.",
+        "status": "APPROVED",
+        "id": 1,
+        "created_at": "2026-09-17T14:12:51.562597",
+        "section": {
+          "name": "Pune-Lonavala",
+          "start_station_id": 1,
+          "end_station_id": 2,
+          "length_km": 64.0,
+          "id": 1
+        }
+      }
+    ]
+  },
+  "analytics_summary": {
+    "status": 200,
+    "data": {
+      "total_movements_logged": 1320,
+      "punctuality_rate_pct": 58.0,
+      "total_maintenance_blocks": 121,
+      "joint_blocks_count": 92,
+      "joint_blocks_ratio_pct": 76.0,
+      "possession_hours_saved": 230.0,
+      "train_detention_avoided_minutes": 3496,
+      "ml_model_metrics": {
+        "mae": 9.97,
+        "r2": -0.071,
+        "trained_samples": 1320
+      }
+    }
+  },
+  "analytics_trend": {
+    "status": 200,
+    "data": [
+      {
+        "date": "08-19",
+        "full_date": "2026-08-19",
+        "punctuality": 54.5,
+        "avg_delay_min": 11.9,
+        "trains_count": 44
+      },
+      {
+        "date": "08-20",
+        "full_date": "2026-08-20",
+        "punctuality": 59.1,
+        "avg_delay_min": 10.9,
+        "trains_count": 44
+      },
+      {
+        "date": "08-21",
+        "full_date": "2026-08-21",
+        "punctuality": 63.6,
+        "avg_delay_min": 11.1,
+        "trains_count": 44
+      },
+      {
+        "date": "08-22",
+        "full_date": "2026-08-22",
+        "punctuality": 70.5,
+        "avg_delay_min": 9.7,
+        "trains_count": 44
+      },
+      {
+        "date": "08-23",
+        "full_date": "2026-08-23",
+        "punctuality": 59.1,
+        "avg_delay_min": 11.1,
+        "trains_count": 44
+      },
+      {
+        "date": "08-24",
+        "full_date": "2026-08-24",
+        "punctuality": 50.0,
+        "avg_delay_min": 13.4,
+        "trains_count": 44
+      },
+      {
+        "date": "08-25",
+        "full_date": "2026-08-25",
+        "punctuality": 56.8,
+        "avg_delay_min": 12.2,
+        "trains_count": 44
+      },
+      {
+        "date": "08-26",
+        "full_date": "2026-08-26",
+        "punctuality": 50.0,
+        "avg_delay_min": 13.6,
+        "trains_count": 44
+      },
+      {
+        "date": "08-27",
+        "full_date": "2026-08-27",
+        "punctuality": 59.1,
+        "avg_delay_min": 10.0,
+        "trains_count": 44
+      },
+      {
+        "date": "08-28",
+        "full_date": "2026-08-28",
+        "punctuality": 54.5,
+        "avg_delay_min": 13.1,
+        "trains_count": 44
+      },
+      {
+        "date": "08-29",
+        "full_date": "2026-08-29",
+        "punctuality": 56.8,
+        "avg_delay_min": 11.5,
+        "trains_count": 44
+      },
+      {
+        "date": "08-30",
+        "full_date": "2026-08-30",
+        "punctuality": 45.5,
+        "avg_delay_min": 14.4,
+        "trains_count": 44
+      },
+      {
+        "date": "08-31",
+        "full_date": "2026-08-31",
+        "punctuality": 50.0,
+        "avg_delay_min": 11.9,
+        "trains_count": 44
+      },
+      {
+        "date": "09-01",
+        "full_date": "2026-09-01",
+        "punctuality": 63.6,
+        "avg_delay_min": 10.4,
+        "trains_count": 44
+      },
+      {
+        "date": "09-02",
+        "full_date": "2026-09-02",
+        "punctuality": 63.6,
+        "avg_delay_min": 8.7,
+        "trains_count": 44
+      },
+      {
+        "date": "09-03",
+        "full_date": "2026-09-03",
+        "punctuality": 63.6,
+        "avg_delay_min": 9.8,
+        "trains_count": 44
+      },
+      {
+        "date": "09-04",
+        "full_date": "2026-09-04",
+        "punctuality": 65.9,
+        "avg_delay_min": 10.0,
+        "trains_count": 44
+      },
+      {
+        "date": "09-05",
+        "full_date": "2026-09-05",
+        "punctuality": 56.8,
+        "avg_delay_min": 13.6,
+        "trains_count": 44
+      },
+      {
+        "date": "09-06",
+        "full_date": "2026-09-06",
+        "punctuality": 47.7,
+        "avg_delay_min": 11.5,
+        "trains_count": 44
+      },
+      {
+        "date": "09-07",
+        "full_date": "2026-09-07",
+        "punctuality": 61.4,
+        "avg_delay_min": 9.3,
+        "trains_count": 44
+      },
+      {
+        "date": "09-08",
+        "full_date": "2026-09-08",
+        "punctuality": 63.6,
+        "avg_delay_min": 9.4,
+        "trains_count": 44
+      },
+      {
+        "date": "09-09",
+        "full_date": "2026-09-09",
+        "punctuality": 61.4,
+        "avg_delay_min": 10.3,
+        "trains_count": 44
+      },
+      {
+        "date": "09-10",
+        "full_date": "2026-09-10",
+        "punctuality": 56.8,
+        "avg_delay_min": 10.3,
+        "trains_count": 44
+      },
+      {
+        "date": "09-11",
+        "full_date": "2026-09-11",
+        "punctuality": 56.8,
+        "avg_delay_min": 10.9,
+        "trains_count": 44
+      },
+      {
+        "date": "09-12",
+        "full_date": "2026-09-12",
+        "punctuality": 65.9,
+        "avg_delay_min": 9.7,
+        "trains_count": 44
+      },
+      {
+        "date": "09-13",
+        "full_date": "2026-09-13",
+        "punctuality": 63.6,
+        "avg_delay_min": 9.5,
+        "trains_count": 44
+      },
+      {
+        "date": "09-14",
+        "full_date": "2026-09-14",
+        "punctuality": 52.3,
+        "avg_delay_min": 12.5,
+        "trains_count": 44
+      },
+      {
+        "date": "09-15",
+        "full_date": "2026-09-15",
+        "punctuality": 63.6,
+        "avg_delay_min": 10.5,
+        "trains_count": 44
+      },
+      {
+        "date": "09-16",
+        "full_date": "2026-09-16",
+        "punctuality": 50.0,
+        "avg_delay_min": 13.4,
+        "trains_count": 44
+      },
+      {
+        "date": "09-17",
+        "full_date": "2026-09-17",
+        "punctuality": 54.5,
+        "avg_delay_min": 11.1,
+        "trains_count": 44
+      }
+    ]
+  },
+  "analytics_congestion": {
+    "status": 200,
+    "data": [
+      {
+        "section_id": 1,
+        "section_name": "Pune-Lonavala",
+        "hourly_load": [
+          6,
+          3,
+          1,
+          1,
+          0,
+          10,
+          15,
+          18,
+          19,
+          21,
+          21,
+          13,
+          17,
+          21,
+          8,
+          22,
+          19,
+          24,
+          23,
+          13,
+          19,
+          13,
+          19,
+          4
+        ],
+        "congestion_index": [
+          25,
+          12,
+          4,
+          4,
+          0,
+          42,
+          62,
+          75,
+          79,
+          88,
+          88,
+          54,
+          71,
+          88,
+          33,
+          92,
+          79,
+          100,
+          96,
+          54,
+          79,
+          54,
+          79,
+          17
+        ],
+        "optimal_window": "02:00 - 05:00"
+      },
+      {
+        "section_id": 2,
+        "section_name": "Lonavala-Karjat",
+        "hourly_load": [
+          3,
+          0,
+          2,
+          0,
+          1,
+          3,
+          7,
+          8,
+          10,
+          16,
+          10,
+          14,
+          15,
+          5,
+          8,
+          9,
+          13,
+          19,
+          13,
+          11,
+          15,
+          11,
+          10,
+          7
+        ],
+        "congestion_index": [
+          16,
+          0,
+          11,
+          0,
+          5,
+          16,
+          37,
+          42,
+          53,
+          84,
+          53,
+          74,
+          79,
+          26,
+          42,
+          47,
+          68,
+          100,
+          68,
+          58,
+          79,
+          58,
+          53,
+          37
+        ],
+        "optimal_window": "11:30 - 14:00"
+      },
+      {
+        "section_id": 3,
+        "section_name": "Pune-Daund",
+        "hourly_load": [
+          7,
+          2,
+          1,
+          0,
+          0,
+          4,
+          9,
+          9,
+          16,
+          21,
+          14,
+          19,
+          12,
+          14,
+          20,
+          13,
+          18,
+          10,
+          19,
+          14,
+          12,
+          12,
+          11,
+          13
+        ],
+        "congestion_index": [
+          33,
+          10,
+          5,
+          0,
+          0,
+          19,
+          43,
+          43,
+          76,
+          100,
+          67,
+          90,
+          57,
+          67,
+          95,
+          62,
+          86,
+          48,
+          90,
+          67,
+          57,
+          57,
+          52,
+          62
+        ],
+        "optimal_window": "11:30 - 14:00"
+      },
+      {
+        "section_id": 4,
+        "section_name": "Daund-Solapur",
+        "hourly_load": [
+          7,
+          2,
+          1,
+          1,
+          0,
+          0,
+          5,
+          15,
+          15,
+          10,
+          21,
+          19,
+          18,
+          15,
+          12,
+          16,
+          11,
+          15,
+          17,
+          11,
+          21,
+          8,
+          14,
+          16
+        ],
+        "congestion_index": [
+          33,
+          10,
+          5,
+          5,
+          0,
+          0,
+          24,
+          71,
+          71,
+          48,
+          100,
+          90,
+          86,
+          71,
+          57,
+          76,
+          52,
+          71,
+          81,
+          52,
+          100,
+          38,
+          67,
+          76
+        ],
+        "optimal_window": "11:30 - 14:00"
+      },
+      {
+        "section_id": 5,
+        "section_name": "Solapur-Kurduvadi",
+        "hourly_load": [
+          6,
+          6,
+          2,
+          1,
+          1,
+          5,
+          7,
+          5,
+          9,
+          17,
+          10,
+          23,
+          10,
+          15,
+          14,
+          11,
+          12,
+          15,
+          11,
+          14,
+          12,
+          18,
+          10,
+          6
+        ],
+        "congestion_index": [
+          26,
+          26,
+          9,
+          4,
+          4,
+          22,
+          30,
+          22,
+          39,
+          74,
+          43,
+          100,
+          43,
+          65,
+          61,
+          48,
+          52,
+          65,
+          48,
+          61,
+          52,
+          78,
+          43,
+          26
+        ],
+        "optimal_window": "11:30 - 14:00"
+      },
+      {
+        "section_id": 6,
+        "section_name": "Lonavala-Solapur",
+        "hourly_load": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "congestion_index": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "optimal_window": "11:30 - 14:00"
+      }
+    ]
+  },
+  "analytics_audit": {
+    "status": 200,
+    "data": [
+      {
+        "id": 121,
+        "date": "2026-09-17",
+        "block_code": "BLK-CR-221",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "02:30",
+        "end_time": "04:00",
+        "planned_duration": 120,
+        "actual_duration": 120,
+        "departments": "Engineering (Track)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 10,
+        "work_completed": "OHE contact wire droppers & bracket replacement",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 120,
+        "date": "2026-09-17",
+        "block_code": "BLK-CR-220",
+        "section_name": "Daund-Solapur",
+        "start_time": "02:30",
+        "end_time": "05:00",
+        "planned_duration": 180,
+        "actual_duration": 180,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 5,
+        "work_completed": "Track circuit joint insulation renewal",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 119,
+        "date": "2026-09-17",
+        "block_code": "BLK-CR-219",
+        "section_name": "Pune-Lonavala",
+        "start_time": "03:30",
+        "end_time": "06:00",
+        "planned_duration": 180,
+        "actual_duration": 180,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 8,
+        "work_completed": "USFD ultrasonic rail flaw detection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 118,
+        "date": "2026-09-17",
+        "block_code": "BLK-CR-218",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "11:30",
+        "end_time": "13:30",
+        "planned_duration": 150,
+        "actual_duration": 150,
+        "departments": "S&T (Signalling & Telecom)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 19,
+        "work_completed": "Track circuit joint insulation renewal",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 117,
+        "date": "2026-09-16",
+        "block_code": "BLK-CR-217",
+        "section_name": "Daund-Solapur",
+        "start_time": "01:0",
+        "end_time": "04:20",
+        "planned_duration": 210,
+        "actual_duration": 200,
+        "departments": "Engineering (Track)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 8,
+        "work_completed": "OHE contact wire droppers & bracket replacement",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 116,
+        "date": "2026-09-16",
+        "block_code": "BLK-CR-216",
+        "section_name": "Pune-Lonavala",
+        "start_time": "03:15",
+        "end_time": "06:00",
+        "planned_duration": 180,
+        "actual_duration": 180,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 6,
+        "work_completed": "Deep screening with BCM machine",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 115,
+        "date": "2026-09-16",
+        "block_code": "BLK-CR-215",
+        "section_name": "Pune-Daund",
+        "start_time": "01:15",
+        "end_time": "02:45",
+        "planned_duration": 120,
+        "actual_duration": 105,
+        "departments": "S&T (Signalling & Telecom)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 23,
+        "work_completed": "Annual catenary wire inspection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 114,
+        "date": "2026-09-16",
+        "block_code": "BLK-CR-214",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "13:0",
+        "end_time": "15:30",
+        "planned_duration": 150,
+        "actual_duration": 150,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 8,
+        "work_completed": "Track circuit joint insulation renewal",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 113,
+        "date": "2026-09-15",
+        "block_code": "BLK-CR-213",
+        "section_name": "Pune-Lonavala",
+        "start_time": "11:30",
+        "end_time": "14:00",
+        "planned_duration": 180,
+        "actual_duration": 180,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 11,
+        "work_completed": "USFD ultrasonic rail flaw detection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 112,
+        "date": "2026-09-15",
+        "block_code": "BLK-CR-212",
+        "section_name": "Pune-Lonavala",
+        "start_time": "13:30",
+        "end_time": "16:00",
+        "planned_duration": 180,
+        "actual_duration": 180,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 9,
+        "work_completed": "Ballast tamping & lining with CSM 09-32",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 111,
+        "date": "2026-09-15",
+        "block_code": "BLK-CR-211",
+        "section_name": "Solapur-Kurduvadi",
+        "start_time": "23:30",
+        "end_time": "02:15",
+        "planned_duration": 180,
+        "actual_duration": 195,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 6,
+        "work_completed": "OHE contact wire droppers & bracket replacement",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 110,
+        "date": "2026-09-15",
+        "block_code": "BLK-CR-210",
+        "section_name": "Daund-Solapur",
+        "start_time": "23:0",
+        "end_time": "02:05",
+        "planned_duration": 180,
+        "actual_duration": 185,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 8,
+        "work_completed": "OHE contact wire droppers & bracket replacement",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 109,
+        "date": "2026-09-15",
+        "block_code": "BLK-CR-209",
+        "section_name": "Pune-Lonavala",
+        "start_time": "23:15",
+        "end_time": "02:30",
+        "planned_duration": 210,
+        "actual_duration": 210,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 5,
+        "work_completed": "USFD ultrasonic rail flaw detection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 108,
+        "date": "2026-09-14",
+        "block_code": "BLK-CR-208",
+        "section_name": "Solapur-Kurduvadi",
+        "start_time": "02:0",
+        "end_time": "05:05",
+        "planned_duration": 180,
+        "actual_duration": 185,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 1,
+        "work_completed": "Switch expansion joint (SEJ) adjustment",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 107,
+        "date": "2026-09-14",
+        "block_code": "BLK-CR-207",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "11:0",
+        "end_time": "14:05",
+        "planned_duration": 180,
+        "actual_duration": 185,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 10,
+        "work_completed": "Switch expansion joint (SEJ) adjustment",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 106,
+        "date": "2026-09-14",
+        "block_code": "BLK-CR-206",
+        "section_name": "Daund-Solapur",
+        "start_time": "01:30",
+        "end_time": "03:15",
+        "planned_duration": 150,
+        "actual_duration": 135,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 5,
+        "work_completed": "Track circuit joint insulation renewal",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 105,
+        "date": "2026-09-13",
+        "block_code": "BLK-CR-205",
+        "section_name": "Pune-Daund",
+        "start_time": "23:0",
+        "end_time": "01:25",
+        "planned_duration": 120,
+        "actual_duration": 145,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 8,
+        "work_completed": "OHE contact wire droppers & bracket replacement",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 104,
+        "date": "2026-09-13",
+        "block_code": "BLK-CR-204",
+        "section_name": "Pune-Daund",
+        "start_time": "02:30",
+        "end_time": "04:50",
+        "planned_duration": 180,
+        "actual_duration": 170,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 4,
+        "work_completed": "OHE contact wire droppers & bracket replacement",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 103,
+        "date": "2026-09-13",
+        "block_code": "BLK-CR-203",
+        "section_name": "Solapur-Kurduvadi",
+        "start_time": "23:0",
+        "end_time": "01:00",
+        "planned_duration": 120,
+        "actual_duration": 120,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 4,
+        "work_completed": "Turnout point machine 1:12 overhaul",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 102,
+        "date": "2026-09-13",
+        "block_code": "BLK-CR-202",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "23:0",
+        "end_time": "02:05",
+        "planned_duration": 180,
+        "actual_duration": 185,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 10,
+        "work_completed": "Deep screening with BCM machine",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 101,
+        "date": "2026-09-12",
+        "block_code": "BLK-CR-201",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "11:30",
+        "end_time": "13:50",
+        "planned_duration": 180,
+        "actual_duration": 170,
+        "departments": "OHE / Traction",
+        "is_joint_block": 0,
+        "train_detention_minutes": 26,
+        "work_completed": "Ballast tamping & lining with CSM 09-32",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 100,
+        "date": "2026-09-12",
+        "block_code": "BLK-CR-200",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "01:15",
+        "end_time": "04:45",
+        "planned_duration": 210,
+        "actual_duration": 225,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 0,
+        "work_completed": "Annual catenary wire inspection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 99,
+        "date": "2026-09-12",
+        "block_code": "BLK-CR-199",
+        "section_name": "Daund-Solapur",
+        "start_time": "23:15",
+        "end_time": "01:00",
+        "planned_duration": 120,
+        "actual_duration": 120,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 5,
+        "work_completed": "Deep screening with BCM machine",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 98,
+        "date": "2026-09-12",
+        "block_code": "BLK-CR-198",
+        "section_name": "Pune-Daund",
+        "start_time": "11:15",
+        "end_time": "14:25",
+        "planned_duration": 180,
+        "actual_duration": 205,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 10,
+        "work_completed": "USFD ultrasonic rail flaw detection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 97,
+        "date": "2026-09-11",
+        "block_code": "BLK-CR-197",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "03:0",
+        "end_time": "05:25",
+        "planned_duration": 120,
+        "actual_duration": 145,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 5,
+        "work_completed": "Annual catenary wire inspection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 96,
+        "date": "2026-09-11",
+        "block_code": "BLK-CR-196",
+        "section_name": "Pune-Daund",
+        "start_time": "02:0",
+        "end_time": "04:00",
+        "planned_duration": 120,
+        "actual_duration": 120,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 1,
+        "work_completed": "Turnout point machine 1:12 overhaul",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 95,
+        "date": "2026-09-11",
+        "block_code": "BLK-CR-195",
+        "section_name": "Pune-Lonavala",
+        "start_time": "11:30",
+        "end_time": "14:20",
+        "planned_duration": 210,
+        "actual_duration": 200,
+        "departments": "S&T (Signalling & Telecom)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 22,
+        "work_completed": "USFD ultrasonic rail flaw detection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 94,
+        "date": "2026-09-11",
+        "block_code": "BLK-CR-194",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "11:15",
+        "end_time": "13:55",
+        "planned_duration": 150,
+        "actual_duration": 175,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 11,
+        "work_completed": "Switch expansion joint (SEJ) adjustment",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 93,
+        "date": "2026-09-10",
+        "block_code": "BLK-CR-193",
+        "section_name": "Pune-Lonavala",
+        "start_time": "13:15",
+        "end_time": "15:50",
+        "planned_duration": 180,
+        "actual_duration": 170,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 9,
+        "work_completed": "Turnout point machine 1:12 overhaul",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 92,
+        "date": "2026-09-10",
+        "block_code": "BLK-CR-192",
+        "section_name": "Daund-Solapur",
+        "start_time": "03:30",
+        "end_time": "05:25",
+        "planned_duration": 120,
+        "actual_duration": 145,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 1,
+        "work_completed": "USFD ultrasonic rail flaw detection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 91,
+        "date": "2026-09-10",
+        "block_code": "BLK-CR-191",
+        "section_name": "Pune-Lonavala",
+        "start_time": "13:0",
+        "end_time": "16:30",
+        "planned_duration": 210,
+        "actual_duration": 210,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 2,
+        "work_completed": "OHE contact wire droppers & bracket replacement",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 90,
+        "date": "2026-09-10",
+        "block_code": "BLK-CR-190",
+        "section_name": "Pune-Lonavala",
+        "start_time": "13:0",
+        "end_time": "15:30",
+        "planned_duration": 150,
+        "actual_duration": 150,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 2,
+        "work_completed": "Annual catenary wire inspection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 89,
+        "date": "2026-09-10",
+        "block_code": "BLK-CR-189",
+        "section_name": "Pune-Lonavala",
+        "start_time": "11:0",
+        "end_time": "14:15",
+        "planned_duration": 180,
+        "actual_duration": 195,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 6,
+        "work_completed": "Turnout point machine 1:12 overhaul",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 88,
+        "date": "2026-09-09",
+        "block_code": "BLK-CR-188",
+        "section_name": "Pune-Daund",
+        "start_time": "02:30",
+        "end_time": "04:15",
+        "planned_duration": 120,
+        "actual_duration": 135,
+        "departments": "S&T (Signalling & Telecom)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 15,
+        "work_completed": "USFD ultrasonic rail flaw detection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 87,
+        "date": "2026-09-09",
+        "block_code": "BLK-CR-187",
+        "section_name": "Pune-Daund",
+        "start_time": "13:15",
+        "end_time": "16:30",
+        "planned_duration": 210,
+        "actual_duration": 210,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 7,
+        "work_completed": "Ballast tamping & lining with CSM 09-32",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 86,
+        "date": "2026-09-09",
+        "block_code": "BLK-CR-186",
+        "section_name": "Pune-Daund",
+        "start_time": "11:30",
+        "end_time": "13:50",
+        "planned_duration": 180,
+        "actual_duration": 170,
+        "departments": "Engineering (Track)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 17,
+        "work_completed": "Turnout point machine 1:12 overhaul",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 85,
+        "date": "2026-09-09",
+        "block_code": "BLK-CR-185",
+        "section_name": "Pune-Lonavala",
+        "start_time": "03:0",
+        "end_time": "05:45",
+        "planned_duration": 150,
+        "actual_duration": 165,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 10,
+        "work_completed": "Ballast tamping & lining with CSM 09-32",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 84,
+        "date": "2026-09-08",
+        "block_code": "BLK-CR-184",
+        "section_name": "Daund-Solapur",
+        "start_time": "01:15",
+        "end_time": "04:00",
+        "planned_duration": 180,
+        "actual_duration": 180,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 8,
+        "work_completed": "USFD ultrasonic rail flaw detection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 83,
+        "date": "2026-09-08",
+        "block_code": "BLK-CR-183",
+        "section_name": "Daund-Solapur",
+        "start_time": "02:15",
+        "end_time": "04:15",
+        "planned_duration": 150,
+        "actual_duration": 135,
+        "departments": "S&T (Signalling & Telecom)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 8,
+        "work_completed": "Ballast tamping & lining with CSM 09-32",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 82,
+        "date": "2026-09-08",
+        "block_code": "BLK-CR-182",
+        "section_name": "Solapur-Kurduvadi",
+        "start_time": "01:0",
+        "end_time": "04:25",
+        "planned_duration": 180,
+        "actual_duration": 205,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 3,
+        "work_completed": "Annual catenary wire inspection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 81,
+        "date": "2026-09-07",
+        "block_code": "BLK-CR-181",
+        "section_name": "Daund-Solapur",
+        "start_time": "01:15",
+        "end_time": "04:55",
+        "planned_duration": 210,
+        "actual_duration": 235,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 12,
+        "work_completed": "Annual catenary wire inspection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 80,
+        "date": "2026-09-07",
+        "block_code": "BLK-CR-180",
+        "section_name": "Pune-Daund",
+        "start_time": "23:30",
+        "end_time": "01:45",
+        "planned_duration": 150,
+        "actual_duration": 165,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 3,
+        "work_completed": "Deep screening with BCM machine",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 79,
+        "date": "2026-09-07",
+        "block_code": "BLK-CR-179",
+        "section_name": "Pune-Daund",
+        "start_time": "02:30",
+        "end_time": "04:25",
+        "planned_duration": 120,
+        "actual_duration": 145,
+        "departments": "OHE / Traction",
+        "is_joint_block": 0,
+        "train_detention_minutes": 13,
+        "work_completed": "OHE contact wire droppers & bracket replacement",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 78,
+        "date": "2026-09-06",
+        "block_code": "BLK-CR-178",
+        "section_name": "Daund-Solapur",
+        "start_time": "13:0",
+        "end_time": "15:50",
+        "planned_duration": 180,
+        "actual_duration": 170,
+        "departments": "Engineering (Track), S&T (Signalling & Telecom)",
+        "is_joint_block": 1,
+        "train_detention_minutes": 5,
+        "work_completed": "USFD ultrasonic rail flaw detection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 77,
+        "date": "2026-09-06",
+        "block_code": "BLK-CR-177",
+        "section_name": "Daund-Solapur",
+        "start_time": "02:30",
+        "end_time": "05:15",
+        "planned_duration": 210,
+        "actual_duration": 195,
+        "departments": "Engineering (Track)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 21,
+        "work_completed": "Turnout point machine 1:12 overhaul",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 76,
+        "date": "2026-09-06",
+        "block_code": "BLK-CR-176",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "03:15",
+        "end_time": "06:00",
+        "planned_duration": 180,
+        "actual_duration": 180,
+        "departments": "S&T (Signalling & Telecom)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 25,
+        "work_completed": "Ballast tamping & lining with CSM 09-32",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 75,
+        "date": "2026-09-06",
+        "block_code": "BLK-CR-175",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "23:30",
+        "end_time": "02:05",
+        "planned_duration": 180,
+        "actual_duration": 185,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 0,
+        "work_completed": "Switch expansion joint (SEJ) adjustment",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 74,
+        "date": "2026-09-06",
+        "block_code": "BLK-CR-174",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "02:0",
+        "end_time": "05:20",
+        "planned_duration": 210,
+        "actual_duration": 200,
+        "departments": "Engineering (Track), OHE / Traction, S&T",
+        "is_joint_block": 1,
+        "train_detention_minutes": 0,
+        "work_completed": "Track circuit joint insulation renewal",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 73,
+        "date": "2026-09-05",
+        "block_code": "BLK-CR-173",
+        "section_name": "Lonavala-Karjat",
+        "start_time": "02:15",
+        "end_time": "04:00",
+        "planned_duration": 120,
+        "actual_duration": 120,
+        "departments": "S&T (Signalling & Telecom)",
+        "is_joint_block": 0,
+        "train_detention_minutes": 23,
+        "work_completed": "Annual catenary wire inspection",
+        "status": "COMPLETED"
+      },
+      {
+        "id": 72,
+        "date": "2026-09-05",
+        "block_code": "BLK-CR-172",
+        "section_name": "Pune-Daund",
+        "start_time": "02:15",
+        "end_time": "05:05",
+        "planned_duration": 180,
+        "actual_duration": 185,
+        "departments": "Engineering (Track), OHE / Traction",
+        "is_joint_block": 1,
+        "train_detention_minutes": 10,
+        "work_completed": "Track circuit joint insulation renewal",
+        "status": "COMPLETED"
+      }
+    ]
+  },
+  "analytics_predict": {
+    "status": 200,
+    "data": {
+      "predicted_delay_minutes": 16.6,
+      "confidence": 0.75,
+      "confidence_pct": "75%",
+      "risk_level": "MEDIUM",
+      "model_metrics": {
+        "mae": 9.97,
+        "r2": -0.071,
+        "trained_samples": 1320
+      }
+    }
+  },
+  "analytics_predict_bad": {
+    "status": 422,
+    "data": {
+      "detail": [
+        {
+          "type": "int_parsing",
+          "loc": [
+            "body",
+            "departure_hour"
+          ],
+          "msg": "Input should be a valid integer, unable to parse string as an integer",
+          "input": "bad_hour"
+        }
+      ]
+    }
+  }
+}
