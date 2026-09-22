@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   TrainFront, 
   RotateCcw, 
@@ -124,10 +124,15 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
   const [trains, setTrains] = useState<Train[]>(INITIAL_TRAINS);
   const [isLive, setIsLive] = useState<boolean>(true);
   const [zoom, setZoom] = useState<number>(1);
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [selectedTrain, setSelectedTrain] = useState<Train | null>(null);
   const [showDistances, setShowDistances] = useState<boolean>(true);
   const [currentTime, setCurrentTime] = useState<string>(operationalTime || "14:32:00");
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Sync trains from backend when operational data is provided
   useEffect(() => {
@@ -178,6 +183,76 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
     return () => clearInterval(interval);
   }, [isLive, operationalTrains, operationalTime]);
 
+  // Fullscreen state listener
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  // Zoom handlers
+  const handleZoomIn = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setZoom(z => Math.min(Number((z + 0.25).toFixed(2)), 3.0));
+  };
+
+  const handleZoomOut = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setZoom(z => {
+      const next = Math.max(Number((z - 0.25).toFixed(2)), 0.5);
+      if (next <= 1) setPan({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleResetZoom = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const handleToggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen?.().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  // Mouse pan / drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only drag on primary left button
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPan({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.15 : -0.15;
+    setZoom(z => {
+      const next = Math.min(Math.max(Number((z + delta).toFixed(2)), 0.5), 3.0);
+      if (next <= 1 && z <= 1) setPan({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
   // Handle station click
   const handleStationClick = (st: Station) => {
     setSelectedTrain(null);
@@ -191,10 +266,11 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
     setSelectedTrain(tr);
   };
 
-  // Reset simulation
+  // Reset simulation & view
   const handleReset = () => {
     setTrains(INITIAL_TRAINS);
     setZoom(1);
+    setPan({ x: 0, y: 0 });
     setSelectedStation(null);
     setSelectedTrain(null);
   };
@@ -226,7 +302,10 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
   }, [trains]);
 
   return (
-    <div className="w-full flex flex-col h-full bg-[#0B1320] text-slate-100 rounded-2xl overflow-hidden border border-slate-800 shadow-md select-none">
+    <div 
+      ref={containerRef}
+      className="w-full flex flex-col h-full bg-[#0B1320] text-slate-100 rounded-2xl overflow-hidden border border-slate-800 shadow-md select-none"
+    >
       {/* 1. TOP MINIMAL CONTROLS BAR */}
       <div className="flex flex-wrap items-center justify-between px-4 py-2.5 bg-[#0e1726]/90 border-b border-slate-800/80 gap-3 text-xs">
         {/* Corridor title & division */}
@@ -252,25 +331,36 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
           </button>
 
           {/* Zoom controls */}
-          <div className="flex items-center bg-slate-800/80 rounded-lg p-0.5 border border-slate-700">
+          <div className="flex items-center bg-slate-800/90 rounded-lg p-0.5 border border-slate-700 shadow-inner">
             <button 
-              onClick={() => setZoom(z => Math.min(z + 0.15, 1.35))} 
-              className="p-1 hover:bg-slate-700 text-slate-300 rounded"
-              title="Zoom In"
+              onClick={handleZoomOut} 
+              disabled={zoom <= 0.5}
+              className="p-1 hover:bg-slate-700 text-slate-300 disabled:text-slate-600 disabled:hover:bg-transparent rounded transition-colors"
+              title="Zoom Out (0.5x min)"
+            >
+              <ZoomOut size={13} />
+            </button>
+            <button
+              onClick={handleResetZoom}
+              className="px-1.5 py-0.5 text-[10px] font-mono font-bold text-blue-300 hover:text-white hover:bg-slate-700/60 rounded cursor-pointer transition-colors"
+              title="Click to reset zoom (100%)"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button 
+              onClick={handleZoomIn} 
+              disabled={zoom >= 3.0}
+              className="p-1 hover:bg-slate-700 text-slate-300 disabled:text-slate-600 disabled:hover:bg-transparent rounded transition-colors"
+              title="Zoom In (3.0x max)"
             >
               <ZoomIn size={13} />
             </button>
             <button 
-              onClick={() => setZoom(z => Math.max(z - 0.15, 0.75))} 
-              className="p-1 hover:bg-slate-700 text-slate-300 rounded"
-              title="Zoom Out"
-            >
-              <ZoomOut size={13} />
-            </button>
-            <button 
-              onClick={() => setZoom(1)} 
-              className="p-1 hover:bg-slate-700 text-slate-300 rounded"
-              title="Reset View"
+              onClick={handleToggleFullscreen} 
+              className={`p-1 hover:bg-slate-700 rounded transition-colors ml-0.5 border-l border-slate-700/60 ${
+                isFullscreen ? 'text-blue-400 bg-blue-950/60' : 'text-slate-300'
+              }`}
+              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen View"}
             >
               <Maximize2 size={13} />
             </button>
@@ -301,7 +391,7 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
           <button
             onClick={handleReset}
             className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors border border-slate-700"
-            title="Reset Train Positions"
+            title="Reset Train Positions & View"
           >
             <RotateCcw size={13} />
           </button>
@@ -309,7 +399,16 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
       </div>
 
       {/* 2. CENTER ACCURATE RAIL SCHEMATIC CANVAS */}
-      <div className="relative flex-1 bg-[#060D17] overflow-hidden min-h-[360px] flex items-center justify-center">
+      <div 
+        className={`relative flex-1 bg-[#060D17] overflow-hidden min-h-[360px] flex items-center justify-center select-none ${
+          zoom > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
+        }`}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+      >
         {/* Subtle engineering grid background */}
         <div 
           className="absolute inset-0 pointer-events-none opacity-20"
@@ -324,6 +423,19 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
           <Navigation size={12} className="text-slate-400 rotate-45" />
           <span>NORTH-EAST CORRIDOR</span>
         </div>
+
+        {/* Floating Quick Reset View indicator when zoomed or panned */}
+        {(zoom !== 1 || pan.x !== 0 || pan.y !== 0) && (
+          <div className="absolute bottom-3 right-4 z-20 pointer-events-auto">
+            <button
+              onClick={handleResetZoom}
+              className="px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-blue-300 hover:text-white text-[11px] font-semibold rounded-lg border border-blue-500/40 shadow-lg backdrop-blur-md transition-all flex items-center gap-1.5"
+            >
+              <RotateCcw size={11} />
+              Reset View ({Math.round(zoom * 100)}%)
+            </button>
+          </div>
+        )}
 
         {/* Active Block Banners (Dynamic from backend) */}
         {(() => {
@@ -359,8 +471,12 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
 
         {/* Interactive SVG Canvas */}
         <div 
-          className="w-full h-full relative transition-transform duration-200 origin-center flex items-center justify-center"
-          style={{ transform: `scale(${zoom})` }}
+          className="w-full h-full relative flex items-center justify-center pointer-events-auto"
+          style={{ 
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: 'center center',
+            transition: isDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)'
+          }}
         >
           <svg viewBox="0 0 1100 480" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
             <defs>
@@ -444,9 +560,12 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
                   onClick={() => handleStationClick(st)} 
                   className="cursor-pointer group"
                 >
-                  {/* Outer Hub Halo */}
+                  {/* Stable stationary hit target (prevents mouseenter/mouseleave oscillation) */}
+                  <circle cx={st.x} cy={st.y} r="22" fill="transparent" />
+
+                  {/* Outer Hub Halo (pointer-events-none to prevent flickering) */}
                   {st.status === 'hub' && (
-                    <circle cx={st.x} cy={st.y} r="18" fill="none" stroke="#10b981" strokeWidth="1.5" strokeOpacity="0.4" className="animate-ping" />
+                    <circle cx={st.x} cy={st.y} r="18" fill="none" stroke="#10b981" strokeWidth="1.5" strokeOpacity="0.4" className="animate-ping pointer-events-none" />
                   )}
 
                   {/* Outer station ring */}
@@ -457,18 +576,18 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
                     fill="#0a1322" 
                     stroke={ringColor} 
                     strokeWidth={isSelected ? 3 : 2} 
-                    className="transition-transform group-hover:scale-125"
+                    className="transition-colors group-hover:stroke-cyan-300 pointer-events-none"
                   />
                   
                   {/* Center node */}
-                  <circle cx={st.x} cy={st.y} r={st.status === 'hub' ? 5 : 3} fill={ringColor} />
+                  <circle cx={st.x} cy={st.y} r={st.status === 'hub' ? 5 : 3} fill={ringColor} className="pointer-events-none" />
 
                   {/* Station Code Label */}
                   <text 
                     x={st.x} 
                     y={st.y - (st.status === 'hub' ? 17 : 13)} 
                     textAnchor="middle" 
-                    className={`font-bold text-[11px] transition-colors ${isSelected ? 'fill-cyan-300 font-extrabold' : 'fill-slate-200 group-hover:fill-cyan-300'}`}
+                    className={`font-bold text-[11px] transition-colors pointer-events-none select-none ${isSelected ? 'fill-cyan-300 font-extrabold' : 'fill-slate-200 group-hover:fill-cyan-300'}`}
                   >
                     {st.name}
                   </text>
@@ -476,7 +595,7 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
                     x={st.x} 
                     y={st.y + (st.status === 'hub' ? 22 : 18)} 
                     textAnchor="middle" 
-                    className="font-mono text-[9px] fill-slate-400"
+                    className="font-mono text-[9px] fill-slate-400 pointer-events-none select-none"
                   >
                     {st.code}
                   </text>
@@ -509,13 +628,13 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
                   className="cursor-pointer group"
                 >
                   {/* Pulsing beacon on track */}
-                  <circle cx="0" cy="-28" r="4" fill={badgeBorder} className="animate-ping opacity-75" />
-                  <circle cx="0" cy="-28" r="2.5" fill={badgeBorder} />
+                  <circle cx="0" cy="-28" r="4" fill={badgeBorder} className="animate-ping opacity-75 pointer-events-none" />
+                  <circle cx="0" cy="-28" r="2.5" fill={badgeBorder} className="pointer-events-none" />
 
                   {/* Connecting dashed whisker from train capsule to track */}
-                  <line x1="0" y1="-28" x2="0" y2="-12" stroke={badgeBorder} strokeWidth="1" strokeDasharray="2 2" />
+                  <line x1="0" y1="-28" x2="0" y2="-12" stroke={badgeBorder} strokeWidth="1" strokeDasharray="2 2" className="pointer-events-none" />
 
-                  {/* Capsule pill */}
+                  {/* Capsule pill with stationary hit area */}
                   <rect 
                     x="-32" 
                     y="-10" 
@@ -525,13 +644,13 @@ export default function DigitalTwin({ operationalTrains, operationalBlocks, oper
                     fill={badgeBg} 
                     stroke={badgeBorder} 
                     strokeWidth={isSelected ? 2 : 1}
-                    className="transition-transform group-hover:scale-110 shadow-lg"
+                    className="transition-colors group-hover:brightness-125 shadow-lg"
                   />
-                  <text x="-24" y="4" fill="#fff" fontSize="8" fontWeight="bold">🚆</text>
-                  <text x="-8" y="3" fill="#fff" fontSize="8.5" fontWeight="bold">{tr.number}</text>
+                  <text x="-24" y="4" fill="#fff" fontSize="8" fontWeight="bold" className="pointer-events-none select-none">🚆</text>
+                  <text x="-8" y="3" fill="#fff" fontSize="8.5" fontWeight="bold" className="pointer-events-none select-none">{tr.number}</text>
 
                   {/* Direction marker */}
-                  <text x="21" y="3" fill={textColor} fontSize="7" fontWeight="bold">
+                  <text x="21" y="3" fill={textColor} fontSize="7" fontWeight="bold" className="pointer-events-none select-none">
                     {tr.direction === 'UP' ? '▲' : '▼'}
                   </text>
 

@@ -4,14 +4,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, SessionLocal
 from . import models
-from .api import network, trains, maintenance, blocks, analytics, operational
-from .services.operational_clock import clock_worker
 
-# Create DB tables
+# Create DB tables before routers/services initialize
 models.Base.metadata.create_all(bind=engine)
+
+from .api import network, trains, maintenance, blocks, analytics, operational, auth, notifications
+from .services.operational_clock import clock_worker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: Seed standard Indian Railways users if not present
+    db = SessionLocal()
+    try:
+        auth.seed_default_users(db)
+    finally:
+        db.close()
+
     # Startup: Start central authoritative operational clock & simulation worker
     clock_task = asyncio.create_task(clock_worker())
     yield
@@ -23,8 +31,8 @@ async def lifespan(app: FastAPI):
         pass
 
 app = FastAPI(
-    title="RailSync Ai API",
-    description="Backend API for the RailSync Ai Railway Block Planning Platform",
+    title="RailSync API",
+    description="Backend API for the RailSync Railway Block Planning Platform",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -50,13 +58,15 @@ app.include_router(maintenance.router)
 app.include_router(blocks.router)
 app.include_router(analytics.router)
 app.include_router(operational.router)
+app.include_router(auth.router)
+app.include_router(notifications.router)
 
 
 
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to RailSync Ai API"}
+    return {"message": "Welcome to RailSync API"}
 
 @app.get("/health")
 def health_check():

@@ -1,4 +1,4 @@
-# RailSync Ai Development Checklist
+# RailSync Development Checklist
 
 Based on the 15-step development roadmap, here is the breakdown of tasks.
 
@@ -39,10 +39,10 @@ Based on the 15-step development roadmap, here is the breakdown of tasks.
 - [x] **11. Dynamic Replanning**
   - [x] WebSocket/Event detection for real-time updates and auto-recalculation
 
-## Phase 4: AI & Finalization (Steps 12-15)
-- [x] **12. AI/ML Prediction**
+## Phase 4: Analytics & Finalization (Steps 12-15)
+- [x] **12. ML Delay Prediction**
   - [x] Implement Scikit-learn models for Priority, Delay, and Risk
-- [x] **13. Explainable AI**
+- [x] **13. Decision Explainability**
   - [x] Generate human-readable reasons for plan selection
 - [x] **14. Human Approval + Audit**
   - [x] Approval workflows and audit trails in DB

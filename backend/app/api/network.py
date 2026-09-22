@@ -17,6 +17,9 @@ def read_stations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 
 @router.post("/stations", response_model=schemas.Station)
 def create_station(station: schemas.StationCreate, db: Session = Depends(get_db)):
+    existing = db.query(models.Station).filter(models.Station.code == station.code).first()
+    if existing:
+        return existing
     db_station = models.Station(name=station.name, code=station.code)
     db.add(db_station)
     db.commit()

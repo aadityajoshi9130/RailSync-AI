@@ -191,7 +191,7 @@ export default function AnalyticsView() {
             <span className="text-xs text-slate-400 font-medium">Central Railway · Mumbai-Pune-Daund-Solapur Corridor</span>
           </div>
           <h3 className="text-2xl font-black text-slate-900 mt-1">
-            Historical Railway Operations & AI Engine
+            Historical Railway Operations & Analytics Engine
           </h3>
           <p className="text-sm text-slate-500 mt-0.5">
             Calibrated on {summary?.total_movements_logged.toLocaleString() || '8,143'} actual train journeys across Central Railway, with seasonal monsoon and festival timetables.

@@ -8,7 +8,7 @@ from datetime import datetime
 from .. import models
 from ..database import SessionLocal
 
-class RailSyncAIMLEngine:
+class RailSyncMLEngine:
     def __init__(self):
         self.model = None
         self.metrics = {"mae": 2.4, "r2": 0.88, "trained_samples": 0}
@@ -105,7 +105,7 @@ class RailSyncAIMLEngine:
         }
 
     def get_feature_importance(self):
-        """Returns Explainable AI feature importance from the Random Forest model."""
+        """Returns feature importance from the Random Forest model."""
         descriptions = {
             "has_active_block": "Active track possession or maintenance block",
             "departure_hour": "Peak vs Off-peak traffic window",
@@ -196,7 +196,7 @@ class RailSyncAIMLEngine:
 
     def explain_recommendation(self, block_code: str, section_id: int, score: int, departments_count: int, train_impact_mins: int):
         """
-        Explainable AI (XAI) rationale generation for corridor block recommendation.
+        Rationale and attribution factor generation for corridor block recommendation.
         """
         section_names = {1: "Pune-Lonavala", 2: "Lonavala-Karjat (Ghat)", 3: "Pune-Daund", 4: "Daund-Solapur", 5: "Solapur-Kurduvadi"}
         sec_name = section_names.get(section_id, f"Section {section_id}")
@@ -244,7 +244,8 @@ class RailSyncAIMLEngine:
             }
         }
 
-ml_engine = RailSyncAIMLEngine()
+ml_engine = RailSyncMLEngine()
+RailSyncAIMLEngine = RailSyncMLEngine
 
 # Initialize training on startup using a local DB session
 def init_ml_engine():

@@ -99,7 +99,7 @@ async def operational_stream():
     train position updates, block transitions, and heartbeat messages.
     """
     async def event_generator():
-        queue = await operational_clock.subscribe()
+        queue = operational_clock.subscribe()
         try:
             # Send initial connection event
             yield f"event: CONNECTED\ndata: {{\"status\": \"connected\", \"clock\": {operational_clock.get_status()}}}\n\n"

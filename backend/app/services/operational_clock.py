@@ -1,19 +1,25 @@
 import asyncio
 import json
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List, Optional, Set
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
 from .. import models
 
+def get_current_ist_now() -> datetime:
+    """Returns current datetime in Indian Standard Time (IST, UTC+5:30)."""
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(ist_tz)
+
 class OperationalClockService:
     def __init__(self):
+        now_ist = get_current_ist_now()
         self.is_running: bool = True
         self.speed_multiplier: float = 1.0  # 1x, 5x, 10x, 60x
-        self.operational_date: str = "2026-09-20"
-        self.operational_seconds: float = 14 * 3600 + 30 * 60  # Default 14:30:00 (seconds since midnight)
-        self.last_tick_time: float = datetime.utcnow().timestamp()
+        self.operational_date: str = now_ist.strftime("%Y-%m-%d")
+        self.operational_seconds: float = float(now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second)
+        self.last_tick_time: float = datetime.now(timezone.utc).timestamp()
         self.subscribers: Set[asyncio.Queue] = set()
         self._lock = asyncio.Lock()
         self._initialized = False
@@ -34,15 +40,28 @@ class OperationalClockService:
     def load_persisted_state(self, db: Session):
         """Loads clock state from system_state table if available."""
         try:
+            now_ist = get_current_ist_now()
+            today_str = now_ist.strftime("%Y-%m-%d")
+
             state_row = db.query(models.SystemState).filter(models.SystemState.key == "operational_clock").first()
             if state_row and state_row.value:
                 data = json.loads(state_row.value)
-                self.operational_date = data.get("date", self.operational_date)
-                self.operational_seconds = float(data.get("seconds", self.operational_seconds))
+                persisted_date = data.get("date", today_str)
+
+                # If persisted date is older than today or invalid, sync to live IST date & time
+                if persisted_date != today_str:
+                    self.operational_date = today_str
+                    self.operational_seconds = float(now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second)
+                else:
+                    self.operational_date = persisted_date
+                    self.operational_seconds = float(data.get("seconds", now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second))
+
                 self.is_running = bool(data.get("is_running", self.is_running))
                 self.speed_multiplier = float(data.get("speed_multiplier", self.speed_multiplier))
                 print(f"[OperationalClock] Restored state: {self.operational_date} {self.get_time_string()} (speed={self.speed_multiplier}x, running={self.is_running})")
             else:
+                self.operational_date = today_str
+                self.operational_seconds = float(now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second)
                 self.persist_state(db)
         except Exception as e:
             print(f"[OperationalClock] Error loading persisted state: {e}")
@@ -65,13 +84,13 @@ class OperationalClockService:
                 db.add(state_row)
             else:
                 state_row.value = payload
-                state_row.updated_at = datetime.utcnow()
+                state_row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             db.commit()
         except Exception as e:
             db.rollback()
             print(f"[OperationalClock] Error persisting state: {e}")
 
-    async def subscribe(self) -> asyncio.Queue:
+    def subscribe(self) -> asyncio.Queue:
         q = asyncio.Queue(maxsize=100)
         self.subscribers.add(q)
         return q
@@ -103,12 +122,14 @@ class OperationalClockService:
                 self.is_running = False
             elif action == "RESUME":
                 self.is_running = True
-                self.last_tick_time = datetime.utcnow().timestamp()
-            elif action == "RESET":
-                self.operational_seconds = 14 * 3600 + 30 * 60
+                self.last_tick_time = datetime.now(timezone.utc).timestamp()
+            elif action in ("RESET", "SYNC_REAL_TIME"):
+                now_ist = get_current_ist_now()
+                self.operational_seconds = float(now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second)
+                self.operational_date = now_ist.strftime("%Y-%m-%d")
                 self.is_running = True
                 self.speed_multiplier = 1.0
-                self.last_tick_time = datetime.utcnow().timestamp()
+                self.last_tick_time = datetime.now(timezone.utc).timestamp()
             elif action == "SPEED" and speed is not None:
                 self.speed_multiplier = max(0.1, min(120.0, float(speed)))
             elif action == "SET_TIME" and set_time:
@@ -173,9 +194,39 @@ class OperationalClockService:
             # Transition: APPROVED -> ACTIVE
             if b.status == models.BlockStatusEnum.APPROVED and is_in_window:
                 b.status = models.BlockStatusEnum.ACTIVE
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
                 sig_raw = f"{b.block_code}:ACTIVATED:{self.operational_date}:{self.get_time_string()}:IR-SYS"
                 sig = f"IR-SIG-{hashlib.sha256(sig_raw.encode()).hexdigest()[:24].upper()}"
+
+                # Update linked maintenance requests to ACTIVE
+                linked_reqs = db.query(models.MaintenanceRequest).filter(
+                    models.MaintenanceRequest.section_id == b.section_id,
+                    models.MaintenanceRequest.status == models.RequestStatusEnum.APPROVED
+                ).all()
+                for lr in linked_reqs:
+                    lr.status = models.RequestStatusEnum.ACTIVE
+
+                # Dispatch notifications
+                try:
+                    from ..api.notifications import create_notification
+                    create_notification(
+                        db=db,
+                        title=f"Block ACTIVE: {b.block_code}",
+                        message=f"Possession is now active on Section #{b.section_id} ({b.start_time}–{b.end_time}). Line restricted.",
+                        role="CENTRAL_CONTROLLER",
+                        type="ALERT"
+                    )
+                    for lr in linked_reqs:
+                        create_notification(
+                            db=db,
+                            title=f"Possession Active: {lr.request_number}",
+                            message=f"Possession activated for {b.block_code}. Proceed with maintenance execution.",
+                            user_id=lr.created_by_id,
+                            department_id=lr.department_id,
+                            type="INFO"
+                        )
+                except Exception as e:
+                    print(f"Notification error: {e}")
 
                 audit_entry = models.ApprovalAuditLog(
                     block_code=b.block_code,
@@ -205,9 +256,40 @@ class OperationalClockService:
             # Transition: ACTIVE -> COMPLETED
             elif b.status == models.BlockStatusEnum.ACTIVE and not is_in_window:
                 b.status = models.BlockStatusEnum.COMPLETED
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
                 sig_raw = f"{b.block_code}:COMPLETED:{self.operational_date}:{self.get_time_string()}:IR-SYS"
                 sig = f"IR-SIG-{hashlib.sha256(sig_raw.encode()).hexdigest()[:24].upper()}"
+
+                # Update linked maintenance requests to COMPLETED
+                linked_reqs = db.query(models.MaintenanceRequest).filter(
+                    models.MaintenanceRequest.section_id == b.section_id,
+                    models.MaintenanceRequest.status == models.RequestStatusEnum.ACTIVE
+                ).all()
+                for lr in linked_reqs:
+                    lr.status = models.RequestStatusEnum.COMPLETED
+                    lr.progress_pct = 100
+
+                # Dispatch completion notifications
+                try:
+                    from ..api.notifications import create_notification
+                    create_notification(
+                        db=db,
+                        title=f"Block COMPLETED: {b.block_code}",
+                        message=f"Possession completed on Section #{b.section_id}. Section reopened to mainline traffic.",
+                        role="CENTRAL_CONTROLLER",
+                        type="SUCCESS"
+                    )
+                    for lr in linked_reqs:
+                        create_notification(
+                            db=db,
+                            title=f"Work Completed: {lr.request_number}",
+                            message="Possession lifted. Maintenance marked complete in operational log.",
+                            user_id=lr.created_by_id,
+                            department_id=lr.department_id,
+                            type="SUCCESS"
+                        )
+                except Exception as e:
+                    print(f"Notification error: {e}")
 
                 audit_entry = models.ApprovalAuditLog(
                     block_code=b.block_code,
@@ -262,17 +344,29 @@ class OperationalClockService:
         if not self.is_running:
             return
 
-        sim_delta = elapsed_real_seconds * self.speed_multiplier
-        self.operational_seconds += sim_delta
+        if self.speed_multiplier == 1.0:
+            now_ist = get_current_ist_now()
+            self.operational_date = now_ist.strftime("%Y-%m-%d")
+            self.operational_seconds = float(now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second + now_ist.microsecond / 1e6)
+        else:
+            sim_delta = elapsed_real_seconds * self.speed_multiplier
+            self.operational_seconds += sim_delta
 
-        # If crossed midnight, advance operational date
-        if self.operational_seconds >= 86400:
-            self.operational_seconds -= 86400
-            try:
-                cur_dt = datetime.strptime(self.operational_date, "%Y-%m-%d")
-                self.operational_date = (cur_dt + timedelta(days=1)).strftime("%Y-%m-%d")
-            except Exception:
-                pass
+            # If crossed midnight, advance operational date
+            while self.operational_seconds >= 86400:
+                self.operational_seconds -= 86400
+                try:
+                    cur_dt = datetime.strptime(self.operational_date, "%Y-%m-%d")
+                    self.operational_date = (cur_dt + timedelta(days=1)).strftime("%Y-%m-%d")
+                except Exception:
+                    break
+            while self.operational_seconds < 0:
+                self.operational_seconds += 86400
+                try:
+                    cur_dt = datetime.strptime(self.operational_date, "%Y-%m-%d")
+                    self.operational_date = (cur_dt - timedelta(days=1)).strftime("%Y-%m-%d")
+                except Exception:
+                    break
 
         # 1. Evaluate block lifecycle
         lifecycle_events = self.evaluate_block_lifecycle(db)
@@ -346,7 +440,7 @@ async def clock_worker():
     while True:
         try:
             await asyncio.sleep(0.5)  # 500ms precision loop
-            now = datetime.utcnow().timestamp()
+            now = datetime.now(timezone.utc).timestamp()
             elapsed = now - operational_clock.last_tick_time
             operational_clock.last_tick_time = now
 
@@ -375,7 +469,7 @@ async def clock_worker():
                 db.close()
 
         except asyncio.CancelledError:
-            break
+            raise
         except Exception as e:
             print(f"[OperationalClockWorker] Error: {e}")
             await asyncio.sleep(1.0)

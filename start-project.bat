@@ -8,9 +8,9 @@ set "BACKEND_DIR=%PROJECT_ROOT%\backend"
 set "FRONTEND_DIR=%PROJECT_ROOT%\frontend"
 set "PYTHON_CMD="
 
-title RailSync AI Launcher
+title RailSync Launcher
 echo.
-echo Starting RailSync AI...
+echo Starting RailSync...
 echo Project: %PROJECT_ROOT%
 echo.
 
@@ -74,8 +74,8 @@ if not exist "%FRONTEND_DIR%\node_modules" (
     popd
 )
 
-start "RailSync AI Backend" /D "%BACKEND_DIR%" cmd /k ""%BACKEND_DIR%\venv\Scripts\python.exe" -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
-start "RailSync AI Frontend" /D "%FRONTEND_DIR%" cmd /k "npm run dev -- --hostname 0.0.0.0 --port 3000"
+start "RailSync Backend" /D "%BACKEND_DIR%" cmd /k ""%BACKEND_DIR%\venv\Scripts\python.exe" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+start "RailSync Frontend" /D "%FRONTEND_DIR%" cmd /k "npm run dev -- --hostname 0.0.0.0 --port 3000"
 
 echo.
 echo Backend:  http://localhost:8000

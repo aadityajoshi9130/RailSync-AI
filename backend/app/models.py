@@ -5,6 +5,13 @@ from datetime import datetime
 
 from .database import Base
 
+class UserRoleEnum(str, enum.Enum):
+    CENTRAL_CONTROLLER = "CENTRAL_CONTROLLER"
+    ENGINEERING = "ENGINEERING"
+    OHE_TRACTION = "OHE_TRACTION"
+    SIGNALING_TELECOM = "SIGNALING_TELECOM"
+    SYSTEM_ADMIN = "SYSTEM_ADMIN"
+
 class PriorityEnum(str, enum.Enum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
@@ -13,8 +20,16 @@ class PriorityEnum(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    role = Column(String)  # Admin, Planner, Controller, Engineering
+    username = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    role = Column(String, nullable=False, default=UserRoleEnum.ENGINEERING.value)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    active = Column(Integer, default=1)  # 1 = active, 0 = inactive
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    department = relationship("Department")
     
 class Department(Base):
     __tablename__ = "departments"
@@ -90,6 +105,50 @@ class BlockPlan(Base):
 
     section = relationship("RailwaySection")
 
+class RequestStatusEnum(str, enum.Enum):
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    RECEIVED = "RECEIVED"
+    AI_ANALYZING = "AI_ANALYZING"
+    RECOMMENDED = "RECOMMENDED"
+    UNDER_CONTROLLER_REVIEW = "UNDER_CONTROLLER_REVIEW"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    REVISION_REQUIRED = "REVISION_REQUIRED"
+    SCHEDULED = "SCHEDULED"
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+
+class MaintenanceRequest(Base):
+    __tablename__ = "maintenance_requests"
+    id = Column(Integer, primary_key=True, index=True)
+    request_number = Column(String, unique=True, index=True, nullable=False) # e.g. "REQ-ENG-0241"
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    section_id = Column(Integer, ForeignKey("railway_sections.id"), nullable=False)
+    work_type = Column(String, nullable=False) # e.g. "Track Renewal", "Deep Screening", "OHE Catenary Inspection", "Point Machine Replacement"
+    location_details = Column(String, nullable=True) # e.g. "Km 114/2 - 116/8 UP Line"
+    asset_id = Column(String, nullable=True) # e.g. "PM-402", "OHE-SEC-2", "TRK-98"
+    priority = Column(Enum(PriorityEnum), default=PriorityEnum.MEDIUM)
+    duration_minutes = Column(Integer, nullable=False, default=120)
+    preferred_date = Column(String, nullable=True) # e.g. "2026-09-22"
+    preferred_start = Column(String, nullable=True) # e.g. "02:00"
+    preferred_end = Column(String, nullable=True) # e.g. "04:30"
+    required_resources = Column(String, nullable=True) # e.g. "1x BCM, 15 Trackmen, 1 Tamping machine"
+    reason = Column(String, nullable=False)
+    status = Column(Enum(RequestStatusEnum), default=RequestStatusEnum.SUBMITTED)
+    rejection_reason = Column(String, nullable=True)
+    progress_pct = Column(Integer, default=0) # 0 to 100
+    progress_notes = Column(String, nullable=True)
+    block_plan_id = Column(Integer, ForeignKey("block_plans.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    department = relationship("Department")
+    created_by = relationship("User")
+    section = relationship("RailwaySection")
+    block_plan = relationship("BlockPlan")
+
 class TrainMovementHistory(Base):
     __tablename__ = "train_movements_history"
     id = Column(Integer, primary_key=True, index=True)
@@ -144,15 +203,39 @@ class AssetConditionHistory(Base):
 class ApprovalAuditLog(Base):
     __tablename__ = "approval_audit_logs"
     id = Column(Integer, primary_key=True, index=True)
-    block_code = Column(String, index=True)
-    action = Column(String) # "APPROVED", "REJECTED", "MODIFIED", "EMERGENCY_OVERRIDE", "SUBMITTED"
+    block_code = Column(String, index=True, nullable=True)
+    action = Column(String) # "APPROVED", "REJECTED", "MODIFIED", "EMERGENCY_OVERRIDE", "SUBMITTED", "LOGIN", "LOGOUT", "REQUEST_CREATED"
     performed_by = Column(String) # e.g. "Sr. DOM (Pune Division)"
     user_role = Column(String) # e.g. "Chief Operations Controller"
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    department = Column(String, nullable=True)
+    entity_type = Column(String, nullable=True) # "BLOCK", "MAINTENANCE_REQUEST", "USER_SESSION"
+    entity_id = Column(String, nullable=True)
+    previous_state = Column(String, nullable=True)
+    new_state = Column(String, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
     digital_signature = Column(String) # SHA-256 HMAC cryptographic signature
     remarks = Column(String)
     safety_gate_status = Column(String, default="PASSED")
     details_json = Column(String, nullable=True)
+
+    user = relationship("User")
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    role = Column(String, nullable=True) # e.g. "CENTRAL_CONTROLLER", "ENGINEERING"
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    title = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    type = Column(String, default="INFO") # INFO, WARNING, SUCCESS, ALERT
+    link = Column(String, nullable=True)
+    is_read = Column(Integer, default=0) # 0 = unread, 1 = read
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    department = relationship("Department")
 
 class SystemState(Base):
     __tablename__ = "system_state"

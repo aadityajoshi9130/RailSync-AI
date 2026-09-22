@@ -3,9 +3,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Fallback to SQLite if Docker/PostgreSQL is not available
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+default_db_path = os.path.join(BACKEND_DIR, "railtwin.db").replace("\\", "/")
 DATABASE_URL = os.getenv(
     "DATABASE_URL", 
-    "sqlite:///./railtwin.db"
+    f"sqlite:///{default_db_path}"
 )
 
 # SQLite specific connect args

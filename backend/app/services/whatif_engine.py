@@ -36,7 +36,7 @@ def run_whatif_simulation(
     - Models primary disruption
     - Computes downstream headway propagation and cascading delay
     - Evaluates priority conflict between passenger, premium, and freight trains
-    - Formulates an AI dynamic replanning recovery mitigation plan
+    - Formulates dynamic replanning recovery mitigation plan
     """
     section_name = SECTION_NAMES.get(section_id, f"Section {section_id}")
     
@@ -117,9 +117,9 @@ def run_whatif_simulation(
         if unmit_d > 0:
             total_passengers_affected += meta["passengers"]
 
-        # AI Mitigated dynamic replanning calculation
+        # Mitigated dynamic replanning calculation
         if is_primary:
-            # AI gives priority routing, clearing route ahead
+            # Automatic priority routing, clearing route ahead
             mit_d = int(primary_delay * 0.65)
             mit_action = "Green Corridor clearance on Up Main"
             mit_status = "RECOVERED"

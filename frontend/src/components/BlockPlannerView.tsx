@@ -1,25 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import {
   Calendar,
   Clock,
   CheckCircle2,
-  AlertTriangle,
-  Layers,
-  ArrowRight,
   ShieldCheck,
   RefreshCw,
   Brain,
-  FileCheck,
   ShieldAlert,
   KeyRound,
-  History,
   Sparkles,
   Sliders,
   CheckSquare,
-  XCircle,
-  HelpCircle,
   Lock
 } from 'lucide-react';
 
@@ -51,7 +45,7 @@ interface XAIExplanation {
   decision_factors?: {
     factor: string;
     contribution_pct: number;
-    impact: string;
+    impact: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | string;
     reason: string;
   }[];
   safety_gate_verdict?: {
@@ -92,79 +86,81 @@ interface AuditLogEntry {
   details_json?: string;
 }
 
+const API_BASE = "http://localhost:8000";
+
 const SAMPLE_BLOCKS: CorridorBlock[] = [
   {
-    id: 'sample-1',
+    id: '1',
     code: 'Block A-17',
-    corridor: 'Pune — Lonavala',
+    corridor: 'Pune — Lonavala (UP Main)',
     section_id: 1,
     startTime: '02:00',
     endTime: '05:00',
     duration: '180 min',
     duration_minutes: 180,
-    departments: ['Track / Engg', 'OHE / Traction', 'S&T Signalling'],
+    departments: ['Engineering (Track)', 'OHE / Traction', 'S&T (Signalling)'],
     departments_count: 3,
-    status: 'APPROVED',
+    status: 'OPTIMIZED',
     trainDelay: '8 min',
     train_impact_minutes: 8,
     score: 97,
-    priority_jobs: '2 high · 1 medium',
-    rationale: 'Low traffic + joint work + no route conflict.',
+    priority_jobs: '3 critical · 1 routine',
+    rationale: 'Deep ballast tamping bundled with 25kV OHE isolation. Lean overnight window eliminates train punctuality loss.'
   },
   {
-    id: 'sample-2',
+    id: '2',
     code: 'Block B-04',
-    corridor: 'Lonavala — Karjat',
+    corridor: 'Lonavala — Karjat (Ghat Incline)',
     section_id: 2,
-    startTime: '11:30',
-    endTime: '13:00',
-    duration: '90 min',
-    duration_minutes: 90,
-    departments: ['OHE / Traction'],
-    departments_count: 1,
-    status: 'OPTIMIZED',
-    trainDelay: '0 min',
-    train_impact_minutes: 0,
+    startTime: '01:30',
+    endTime: '04:30',
+    duration: '180 min',
+    duration_minutes: 180,
+    departments: ['Engineering (Track)', 'OHE / Traction'],
+    departments_count: 2,
+    status: 'APPROVED',
+    trainDelay: '12 min',
+    train_impact_minutes: 12,
     score: 91,
-    priority_jobs: '1 high',
-    rationale: 'Midday lean window on Ghat incline.',
+    priority_jobs: 'Catch siding check · OHE dropper tuning',
+    rationale: 'Steep 1:37 gradient possession. Triple-braking banker locos held at Karjat.'
   },
   {
-    id: 'sample-3',
-    code: 'Block C-12',
-    corridor: 'Daund — Solapur',
-    section_id: 4,
+    id: '3',
+    code: 'Block C-11',
+    corridor: 'Pune — Daund (DOWN Main)',
+    section_id: 3,
     startTime: '14:00',
     endTime: '16:30',
     duration: '150 min',
     duration_minutes: 150,
-    departments: ['Track / Engg', 'S&T Signalling'],
-    departments_count: 2,
+    departments: ['S&T (Signalling)'],
+    departments_count: 1,
     status: 'CONFLICT',
-    trainDelay: '35 min (High)',
+    trainDelay: '35 min',
     train_impact_minutes: 35,
-    score: 64,
-    priority_jobs: '2 high',
-    rationale: 'High passenger traffic clash detected.',
+    score: 48,
+    priority_jobs: 'Axle counter replacement',
+    rationale: 'Window clashes with Vande Bharat Express path (Train #22226). Controller adjustment required.'
   },
   {
-    id: 'sample-4',
-    code: 'Block D-08',
-    corridor: 'Solapur — Kurduvadi',
-    section_id: 5,
-    startTime: '23:30',
-    endTime: '02:00',
-    duration: '150 min',
-    duration_minutes: 150,
-    departments: ['Track / Engg'],
-    departments_count: 1,
-    status: 'OPTIMIZED',
-    trainDelay: '4 min',
-    train_impact_minutes: 4,
-    score: 94,
-    priority_jobs: '1 medium',
-    rationale: 'Overnight track possession with freight rerouting.',
-  },
+    id: '4',
+    code: 'Block D-09',
+    corridor: 'Daund — Solapur',
+    section_id: 4,
+    startTime: '11:30',
+    endTime: '13:30',
+    duration: '120 min',
+    duration_minutes: 120,
+    departments: ['Engineering (Track)', 'S&T'],
+    departments_count: 2,
+    status: 'CANDIDATE',
+    trainDelay: '15 min',
+    train_impact_minutes: 15,
+    score: 82,
+    priority_jobs: 'Turnout weld replacement',
+    rationale: 'Midday passenger lull window. Freight trains regulated on loop lines.'
+  }
 ];
 
 const TIME_SLOTS = [
@@ -172,10 +168,8 @@ const TIME_SLOTS = [
   "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"
 ];
 
-const API_BASE = "http://localhost:8000";
-
 interface BlockPlannerViewProps {
-  initialSubTab?: 'timeline' | 'xai' | 'risk' | 'approvals' | 'audit';
+  readonly initialSubTab?: 'timeline' | 'xai' | 'risk' | 'approvals' | 'audit';
 }
 
 export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPlannerViewProps) {
@@ -197,15 +191,25 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
   const [riskDepts, setRiskDepts] = useState(3);
   const [riskHour, setRiskHour] = useState(2);
 
+  // Auth & Permissions
+  const { user, authFetch } = useAuth();
+
   // Approval & Audit State
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [approverName, setApproverName] = useState("Chief Operations Controller (Sr. DOM), Pune Division");
-  const [approverRole, setApproverRole] = useState("Chief Operations Controller");
+  const [approverName, setApproverName] = useState(user?.name || "Chief Operations Controller (Sr. DOM), Pune Division");
+  const [approverRole, setApproverRole] = useState(user?.role || "CENTRAL_CONTROLLER");
   const [approvalRemarks, setApprovalRemarks] = useState("Corridor block verified against live traffic headway. Approved for execution.");
   const [isEmergencyOverride, setIsEmergencyOverride] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(false);
   const [actionSuccessNotice, setActionSuccessNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setApproverName(user.name);
+      setApproverRole(user.role);
+    }
+  }, [user]);
 
   // Sync prop changes to subTab
   useEffect(() => {
@@ -224,18 +228,18 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
         const blocksArr = Array.isArray(data) ? data : (data.blocks || []);
         if (blocksArr.length > 0) {
           const liveBlocks: CorridorBlock[] = blocksArr.map((b: Record<string, unknown>, idx: number) => ({
-            id: `live-${b.id || idx}`,
-            code: (b.block_code as string) || `BLK-${b.id}`,
+            id: `live-${String(b.id ?? idx)}`,
+            code: (b.block_code as string) || `BLK-${String(b.id ?? idx)}`,
             corridor: (b.section_name as string) || (b.section && (b.section as Record<string, unknown>).name as string) || 'Central Corridor',
             section_id: Number(b.section_id) || 1,
             startTime: (b.start_time as string) || '02:00',
             endTime: (b.end_time as string) || '05:00',
-            duration: `${b.duration_minutes || 180} min`,
+            duration: `${Number(b.duration_minutes) || 180} min`,
             duration_minutes: Number(b.duration_minutes) || 180,
             departments: (b.departments as string[] || ['Engineering (Track)', 'OHE / Traction', 'S&T']),
             departments_count: Number(b.departments_count) || 3,
             status: (b.status as CorridorBlock['status']) || 'OPTIMIZED',
-            trainDelay: `${b.train_impact_minutes || 8} min`,
+            trainDelay: `${Number(b.train_impact_minutes) || 8} min`,
             train_impact_minutes: Number(b.train_impact_minutes) || 8,
             score: Number(b.score) || 92,
             priority_jobs: (b.priority_jobs as string) || '2 high · 1 medium',
@@ -337,7 +341,7 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
     setActionSuccessNotice(null);
     try {
       const endpoint = actionType === 'APPROVED' ? '/api/blocks/approve-workflow' : '/api/blocks/reject-workflow';
-      const res = await fetch(`${API_BASE}${endpoint}`, {
+      const res = await authFetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -406,13 +410,13 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-bold rounded-md uppercase tracking-wider">
-              Phase 4 AI & Governance Engine
+              Phase 4 Optimization & Governance
             </span>
             <span className="text-xs text-slate-400 font-medium">Central Railway Corridor</span>
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mt-1">Corridor Block Planner & AI Governance</h3>
+          <h3 className="text-2xl font-black text-slate-900 mt-1">Corridor Block Planner & Operations Governance</h3>
           <p className="text-sm text-slate-500 mt-0.5">
-            CP-SAT optimization, Explainable AI decision trees, ML overrun risk heuristics, and cryptographic audit workflows.
+            CP-SAT optimization, decision explainability factor trees, overrun risk heuristics, and cryptographic audit workflows.
           </p>
         </div>
 
@@ -420,8 +424,8 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
         <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
           {[
             { id: 'timeline', label: 'Corridor Gantt', icon: Calendar },
-            { id: 'xai', label: 'Explainable AI (XAI)', icon: Brain },
-            { id: 'risk', label: 'ML Overrun Risk', icon: ShieldAlert },
+            { id: 'xai', label: 'Decision Explainability', icon: Brain },
+            { id: 'risk', label: 'Overrun Risk Analysis', icon: ShieldAlert },
             { id: 'approvals', label: 'Approvals & Sign-off', icon: CheckSquare },
             { id: 'audit', label: 'Cryptographic Audit', icon: KeyRound },
           ].map(t => {
@@ -469,7 +473,7 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
 
               {/* Corridor Rows */}
               <div className="space-y-4 pt-4">
-                {blocks.map((block, i) => {
+                {blocks.map((block) => {
                   const parseTime = (t: string) => {
                     const [h, m] = t.split(':').map(Number);
                     return h * 60 + (m || 0);
@@ -482,34 +486,31 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
 
                   const isSelected = selectedBlock.code === block.code;
 
-                  const statusColor = block.status === 'CONFLICT'
-                    ? 'bg-red-500 text-white hover:bg-red-600'
-                    : block.status === 'APPROVED'
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    : block.status === 'ACTIVE'
-                    ? 'bg-amber-500 text-white hover:bg-amber-600'
-                    : block.status === 'CANDIDATE'
-                    ? 'bg-purple-500 text-white hover:bg-purple-600'
-                    : block.status === 'COMPLETED'
-                    ? 'bg-slate-400 text-white'
-                    : 'bg-blue-600 text-white hover:bg-blue-700';
+                  let statusColor = 'bg-blue-600 text-white hover:bg-blue-700';
+                  if (block.status === 'CONFLICT') statusColor = 'bg-red-500 text-white hover:bg-red-600';
+                  else if (block.status === 'APPROVED') statusColor = 'bg-emerald-600 text-white hover:bg-emerald-700';
+                  else if (block.status === 'ACTIVE') statusColor = 'bg-amber-500 text-white hover:bg-amber-600';
+                  else if (block.status === 'CANDIDATE') statusColor = 'bg-purple-500 text-white hover:bg-purple-600';
+                  else if (block.status === 'COMPLETED') statusColor = 'bg-slate-400 text-white';
 
                   return (
-                    <div key={`${block.id || block.code}-${i}`} className="flex items-center gap-4">
+                    <div key={block.id || block.code} className="flex items-center gap-4">
                       <span className="w-36 text-xs font-semibold text-slate-700 shrink-0 truncate">
                         {block.corridor}
                       </span>
                       <div className="flex-1 h-9 bg-slate-50 rounded-xl relative border border-slate-100 overflow-hidden">
-                        <div
+                        <button
+                          type="button"
                           onClick={() => setSelectedBlock(block)}
                           style={{ left, width }}
-                          className={`absolute top-1 bottom-1 rounded-lg px-2 flex items-center justify-between text-[10px] font-bold cursor-pointer transition-all shadow-sm ${statusColor} ${
+                          aria-label={`Select ${block.code} on ${block.corridor}`}
+                          className={`absolute top-1 bottom-1 rounded-lg px-2 flex items-center justify-between text-[10px] font-bold transition-all shadow-sm ${statusColor} ${
                             isSelected ? 'ring-2 ring-blue-400 ring-offset-1 scale-102' : ''
                           }`}
                         >
                           <span className="truncate">{block.code}</span>
                           <span className="opacity-90">{block.startTime}</span>
-                        </div>
+                        </button>
                       </div>
                     </div>
                   );
@@ -542,8 +543,8 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                   Integrated Multi-Department Coordination
                 </h5>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {selectedBlock.departments.map((dept, idx) => (
-                    <div key={idx} className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                  {selectedBlock.departments.map((dept) => (
+                    <div key={dept} className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl">
                       <span className="w-2 h-2 rounded-full bg-blue-500 inline-block mr-2" />
                       <span className="text-xs font-bold text-slate-800">{dept}</span>
                       <p className="text-[11px] text-slate-500 mt-1">Simultaneous access granted. Traction isolation synchronized.</p>
@@ -558,7 +559,7 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                   className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition-colors"
                 >
                   <Brain size={14} />
-                  View Explainable AI Factors
+                  View Decision Factors
                 </button>
                 <button
                   onClick={() => {
@@ -620,7 +621,7 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
       )}
 
       {/* ======================================================== */}
-      {/* SUBTAB 2: EXPLAINABLE AI (XAI) & ATTRIBUTION */}
+      {/* SUBTAB 2: DECISION EXPLAINABILITY & ATTRIBUTION */}
       {/* ======================================================== */}
       {subTab === 'xai' && (
         <div className="space-y-6">
@@ -630,7 +631,7 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
               <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                 <div>
                   <span className="text-xs font-mono text-blue-600 font-bold uppercase tracking-wider">
-                    Explainable AI Model Attribution
+                    Optimization Factor Attribution
                   </span>
                   <h4 className="text-xl font-bold text-slate-900 mt-0.5">
                     Why was {selectedBlock.code} selected for {selectedBlock.corridor}?
@@ -654,8 +655,8 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                 <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Key Scoring Contributions & Attribution
                 </h5>
-                {decisionFactors.map((factor, idx) => (
-                  <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                {decisionFactors.map((factor) => (
+                  <div key={factor.factor} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold text-slate-900">{factor.factor}</span>
                       <span className="px-2 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-800 font-mono">
@@ -681,8 +682,8 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                   Mandatory Railway Safety Gates
                 </h5>
                 <div className="space-y-2.5">
-                  {safetyRules.map((gate, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                  {safetyRules.map((gate) => (
+                    <div key={gate.rule} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
                       <span className="text-slate-700 font-medium">{gate.rule}</span>
                       <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                         {gate.passed ? "PASSED" : "REVIEW"}
@@ -704,8 +705,8 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                   </span>
                 </div>
                 <div className="space-y-3 text-xs">
-                  {featureImportances.map((feat, idx) => (
-                    <div key={idx} className="space-y-1">
+                  {featureImportances.map((feat) => (
+                    <div key={feat.feature || feat.description} className="space-y-1">
                       <div className="flex justify-between text-slate-300 text-[11px]">
                         <span>{feat.description || feat.feature}</span>
                         <span className="font-mono font-bold text-blue-400">
@@ -741,8 +742,9 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
 
             <div className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-600 font-bold mb-1">Corridor Section</label>
+                <label htmlFor="risk-section-select" className="block text-slate-600 font-bold mb-1">Corridor Section</label>
                 <select
+                  id="risk-section-select"
                   value={riskSecId}
                   onChange={e => setRiskSecId(Number(e.target.value))}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-800"
@@ -757,10 +759,11 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
 
               <div>
                 <div className="flex justify-between font-bold mb-1">
-                  <span className="text-slate-600">Block Duration</span>
+                  <label htmlFor="risk-duration-slider" className="text-slate-600">Block Duration</label>
                   <span className="font-mono text-blue-600">{riskDuration} min</span>
                 </div>
                 <input
+                  id="risk-duration-slider"
                   type="range"
                   min={60}
                   max={360}
@@ -772,7 +775,7 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
               </div>
 
               <div>
-                <label className="block text-slate-600 font-bold mb-1">Coordinated Departments</label>
+                <span className="block text-slate-600 font-bold mb-1">Coordinated Departments</span>
                 <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
                   {[1, 2, 3].map(d => (
                     <button
@@ -790,8 +793,9 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
               </div>
 
               <div>
-                <label className="block text-slate-600 font-bold mb-1">Start Hour</label>
+                <label htmlFor="risk-start-hour-select" className="block text-slate-600 font-bold mb-1">Start Hour</label>
                 <select
+                  id="risk-start-hour-select"
                   value={riskHour}
                   onChange={e => setRiskHour(Number(e.target.value))}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-800"
@@ -865,8 +869,8 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                       "Night possession window (low passenger conflict)",
                       "3 departments integrated (High synergy)",
                       "Planned duration: 180 min"
-                    ]).map((driver, idx) => (
-                      <div key={idx} className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-700">
+                    ]).map((driver) => (
+                      <div key={driver} className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-700">
                         <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
                         <span>{driver}</span>
                       </div>
@@ -874,7 +878,7 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                   </div>
 
                   <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-900 mt-4 leading-relaxed">
-                    <span className="font-bold block mb-0.5">AI Mitigation Advisory:</span>
+                    <span className="font-bold block mb-0.5">Mitigation Advisory:</span>
                     Maintain standby diesel shunting engines at Lonavala and Karjat Ghat approaches during active possession to prevent traction deadlock.
                   </div>
                 </div>
@@ -915,8 +919,9 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
               {/* Form details */}
               <div className="space-y-4 text-xs">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Authorizing Official</label>
+                  <label htmlFor="approver-name-input" className="block font-bold text-slate-700 mb-1">Authorizing Official</label>
                   <input
+                    id="approver-name-input"
                     type="text"
                     value={approverName}
                     onChange={e => setApproverName(e.target.value)}
@@ -926,8 +931,9 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Designation / Role</label>
+                    <label htmlFor="approver-role-input" className="block font-bold text-slate-700 mb-1">Designation / Role</label>
                     <input
+                      id="approver-role-input"
                       type="text"
                       value={approverRole}
                       onChange={e => setApproverRole(e.target.value)}
@@ -935,7 +941,7 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                     />
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Safety Gate Status</label>
+                    <span className="block font-bold text-slate-700 mb-1">Safety Gate Status</span>
                     <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl font-bold text-emerald-800 flex items-center gap-1.5">
                       <ShieldCheck size={15} />
                       PASSED ALL 5 CRITERIA
@@ -944,8 +950,9 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Controller Remarks & Instructions</label>
+                  <label htmlFor="approval-remarks-textarea" className="block font-bold text-slate-700 mb-1">Controller Remarks & Instructions</label>
                   <textarea
+                    id="approval-remarks-textarea"
                     rows={3}
                     value={approvalRemarks}
                     onChange={e => setApprovalRemarks(e.target.value)}
@@ -953,38 +960,52 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                   />
                 </div>
 
-                <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900">
-                  <input
-                    type="checkbox"
-                    id="emergency"
-                    checked={isEmergencyOverride}
-                    onChange={e => setIsEmergencyOverride(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
-                  />
-                  <label htmlFor="emergency" className="text-xs font-semibold cursor-pointer">
-                    Declare Emergency Override (Bypasses non-critical freight dwell holds)
-                  </label>
-                </div>
+                {user?.role === 'CENTRAL_CONTROLLER' || user?.role === 'SYSTEM_ADMIN' ? (
+                  <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900">
+                    <input
+                      type="checkbox"
+                      id="emergency"
+                      checked={isEmergencyOverride}
+                      onChange={e => setIsEmergencyOverride(e.target.checked)}
+                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                    />
+                    <label htmlFor="emergency" className="text-xs font-semibold cursor-pointer">
+                      Declare Emergency Override (Bypasses non-critical freight dwell holds)
+                    </label>
+                  </div>
+                ) : null}
               </div>
 
               {/* Approval Actions */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => handleWorkflowAction('APPROVED')}
-                  disabled={submittingAction}
-                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  {submittingAction ? <RefreshCw size={14} className="animate-spin" /> : <KeyRound size={14} />}
-                  Issue Official Cryptographic Sign-Off
-                </button>
-                <button
-                  onClick={() => handleWorkflowAction('REJECTED')}
-                  disabled={submittingAction}
-                  className="px-6 py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-bold text-xs border border-red-200 transition-colors"
-                >
-                  Reject Block
-                </button>
-              </div>
+              {user?.role === 'CENTRAL_CONTROLLER' || user?.role === 'SYSTEM_ADMIN' ? (
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => handleWorkflowAction('APPROVED')}
+                    disabled={submittingAction}
+                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    {submittingAction ? <RefreshCw size={14} className="animate-spin" /> : <KeyRound size={14} />}
+                    Issue Official Cryptographic Sign-Off
+                  </button>
+                  <button
+                    onClick={() => handleWorkflowAction('REJECTED')}
+                    disabled={submittingAction}
+                    className="px-6 py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-bold text-xs border border-red-200 transition-colors"
+                  >
+                    Reject Block
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 flex items-start gap-3">
+                  <ShieldCheck className="text-blue-600 shrink-0 mt-0.5" size={18} />
+                  <div>
+                    <div className="font-bold text-slate-800">Sole Approval Authority: Central Operations Controller</div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      Department engineers submit block requisitions from their departmental console. Official digital sign-off and schedule execution is strictly executed by the Central Operations Controller (Sr. DOM).
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Verification & Security Notice */}
@@ -1049,18 +1070,29 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
                 {auditLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3 px-3 font-mono text-slate-500 whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleTimeString('en-IN', { hour12: false })}
+                      {(() => {
+                        if (!log.timestamp) return "--:--:--";
+                        try {
+                          const d = new Date(log.timestamp);
+                          return Number.isNaN(d.getTime()) ? String(log.timestamp) : d.toLocaleTimeString('en-IN', { hour12: false });
+                        } catch {
+                          return String(log.timestamp);
+                        }
+                      })()}
                     </td>
                     <td className="py-3 px-3 font-bold text-slate-900">{log.block_code}</td>
                     <td className="py-3 px-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                        log.action === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
-                        log.action === 'BLOCK_ACTIVATED' ? 'bg-amber-100 text-amber-800' :
-                        log.action === 'BLOCK_COMPLETED' ? 'bg-blue-100 text-blue-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {log.action}
-                      </span>
+                      {(() => {
+                        let colorClass = "bg-red-100 text-red-800";
+                        if (log.action === "APPROVED") colorClass = "bg-emerald-100 text-emerald-800";
+                        else if (log.action === "BLOCK_ACTIVATED") colorClass = "bg-amber-100 text-amber-800";
+                        else if (log.action === "BLOCK_COMPLETED") colorClass = "bg-blue-100 text-blue-800";
+                        return (
+                          <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${colorClass}`}>
+                            {log.action}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-3 px-3 font-medium text-slate-800">{log.performed_by}</td>
                     <td className="py-3 px-3 text-slate-500">{log.user_role}</td>
@@ -1095,8 +1127,9 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Authorizing Official</label>
+                <label htmlFor="modal-approver-name" className="block font-bold text-slate-700 mb-1">Authorizing Official</label>
                 <input
+                  id="modal-approver-name"
                   type="text"
                   value={approverName}
                   onChange={e => setApproverName(e.target.value)}
@@ -1105,8 +1138,9 @@ export default function BlockPlannerView({ initialSubTab = 'timeline' }: BlockPl
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Remarks</label>
+                <label htmlFor="modal-approval-remarks" className="block font-bold text-slate-700 mb-1">Remarks</label>
                 <textarea
+                  id="modal-approval-remarks"
                   rows={2}
                   value={approvalRemarks}
                   onChange={e => setApprovalRemarks(e.target.value)}

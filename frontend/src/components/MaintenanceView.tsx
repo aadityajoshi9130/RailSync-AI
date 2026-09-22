@@ -107,7 +107,7 @@ export default function MaintenanceView() {
           <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
             Active Demands ({tasks.length})
           </h4>
-          <span className="text-xs text-slate-400">Auto-synced with RailSync Ai Optimizer</span>
+          <span className="text-xs text-slate-400">Auto-synced with RailSync Optimizer</span>
         </div>
 
         <div className="overflow-x-auto">

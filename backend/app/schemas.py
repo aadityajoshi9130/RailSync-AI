@@ -116,10 +116,16 @@ class ApprovalWorkflowRequest(BaseModel):
 
 class ApprovalAuditLogResponse(BaseModel):
     id: int
-    block_code: str
+    block_code: Optional[str] = None
     action: str
     performed_by: str
     user_role: str
+    user_id: Optional[int] = None
+    department: Optional[str] = None
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    previous_state: Optional[str] = None
+    new_state: Optional[str] = None
     timestamp: datetime
     digital_signature: str
     remarks: str
@@ -142,3 +148,97 @@ class MLBlockRiskRequest(BaseModel):
     duration_minutes: int = 180
     departments_count: int = 3
     start_hour: int = 2
+
+# --- User & Auth Schemas ---
+class UserLoginRequest(BaseModel):
+    username: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    name: str
+    email: str
+    role: str
+    department_id: Optional[int] = None
+    department_name: Optional[str] = None
+    active: int = 1
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+class UserCreate(BaseModel):
+    username: str
+    name: str
+    email: str
+    password: str
+    role: str
+    department_id: Optional[int] = None
+
+# --- Maintenance Request Schemas ---
+class MaintenanceRequestCreate(BaseModel):
+    department_id: int
+    section_id: int
+    work_type: str
+    location_details: Optional[str] = None
+    asset_id: Optional[str] = None
+    priority: PriorityEnum = PriorityEnum.MEDIUM
+    duration_minutes: int = 120
+    preferred_date: Optional[str] = None
+    preferred_start: Optional[str] = "02:00"
+    preferred_end: Optional[str] = "04:30"
+    required_resources: Optional[str] = None
+    reason: str
+
+class MaintenanceRequestUpdateProgress(BaseModel):
+    progress_pct: int
+    progress_notes: Optional[str] = None
+
+class MaintenanceRequestResponse(BaseModel):
+    id: int
+    request_number: str
+    department_id: int
+    department_name: Optional[str] = None
+    created_by_id: Optional[int] = None
+    created_by_name: Optional[str] = None
+    section_id: int
+    section_name: Optional[str] = None
+    work_type: str
+    location_details: Optional[str] = None
+    asset_id: Optional[str] = None
+    priority: str
+    duration_minutes: int
+    preferred_date: Optional[str] = None
+    preferred_start: Optional[str] = None
+    preferred_end: Optional[str] = None
+    required_resources: Optional[str] = None
+    reason: str
+    status: str
+    rejection_reason: Optional[str] = None
+    progress_pct: int = 0
+    progress_notes: Optional[str] = None
+    block_plan_id: Optional[int] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
+
+# --- Notification Schemas ---
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: Optional[int] = None
+    role: Optional[str] = None
+    department_id: Optional[int] = None
+    title: str
+    message: str
+    type: str
+    link: Optional[str] = None
+    is_read: int
+    created_at: datetime
+    class Config:
+        from_attributes = True

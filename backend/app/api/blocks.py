@@ -10,6 +10,7 @@ from .. import models, schemas
 from ..database import get_db
 from ..services import optimizer
 from ..services.ml_engine import ml_engine
+from ..auth import get_current_user, require_roles
 
 router = APIRouter(
     prefix="/api/blocks",
@@ -25,7 +26,7 @@ class WhatIfRequest(BaseModel):
 
 @router.post("/simulate-whatif")
 def simulate_whatif(req: WhatIfRequest, db: Session = Depends(get_db)):
-    """Simulates train operational shock, cascading delays, and AI mitigation."""
+    """Simulates train operational shock, cascading delays, and dynamic mitigation."""
     from ..services import whatif_engine
     return whatif_engine.run_whatif_simulation(
         db=db,
@@ -37,9 +38,27 @@ def simulate_whatif(req: WhatIfRequest, db: Session = Depends(get_db)):
     )
 
 @router.get("/recommendation")
-def get_ai_recommendation(section_id: int = 1, db: Session = Depends(get_db)):
-    """Returns AI-optimized maintenance block plan for corridor."""
+def get_recommendation(section_id: Optional[int] = None, db: Session = Depends(get_db)):
+    """Returns optimized maintenance block plan for corridor."""
     return optimizer.generate_corridor_recommendation(section_id, db)
+
+@router.get("/candidates")
+def get_candidate_windows(section_id: int = 1, db: Session = Depends(get_db)):
+    """Returns multi-candidate scheduling time windows and joint coordination opportunities."""
+    candidates = optimizer.generate_candidate_windows(section_id, db)
+    joint_info = optimizer.detect_joint_blocks(section_id, db)
+    conflicts = optimizer.analyze_conflicts(section_id, "02:00", "05:00", db)
+    return {
+        "section_id": section_id,
+        "candidates": candidates,
+        "joint_opportunity": joint_info,
+        "conflicts": conflicts
+    }
+
+@router.get("/joint-opportunities")
+def get_joint_opportunities(db: Session = Depends(get_db)):
+    """Scans all corridor sections and returns active joint department block opportunities."""
+    return optimizer.scan_all_joint_opportunities(db)
 
 @router.get("/conflicts")
 def get_conflicts(section_id: int = 1, start_time: str = "02:00", end_time: str = "05:00", db: Session = Depends(get_db)):
@@ -51,54 +70,106 @@ def list_blocks(db: Session = Depends(get_db)):
     return db.query(models.BlockPlan).all()
 
 @router.post("/approve")
-def approve_block(block_code: str = "Block A-17", section_id: int = 1, db: Session = Depends(get_db)):
-    """Legacy quick-approve endpoint for backwards compatibility."""
+def approve_block(
+    block_code: Optional[str] = None,
+    section_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("CENTRAL_CONTROLLER", "SYSTEM_ADMIN"))
+):
+    """Legacy quick-approve endpoint protected by Central Controller RBAC."""
+    if not block_code:
+        rec = optimizer.generate_corridor_recommendation(section_id, db)
+        block_code = rec.get("block_code", "Block A-17")
+        if section_id is None:
+            section_id = rec.get("section_id", 1)
+    elif section_id is None:
+        code_to_sec = {
+            "Block A-17": 1,
+            "Block B-04": 2,
+            "Block C-11": 3,
+            "Block D-09": 4,
+            "Block E-03": 5,
+            "Block F-08": 6
+        }
+        section_id = code_to_sec.get(block_code, 1)
+
     req = schemas.ApprovalWorkflowRequest(
         block_code=block_code,
         section_id=section_id,
         action="APPROVED",
-        performed_by="Chief Operations Controller, Pune Division",
-        user_role="Chief Controller",
-        remarks="Approved via Quick Action."
+        performed_by=current_user.name,
+        user_role=current_user.role,
+        remarks=f"Approved corridor possession for {block_code}."
     )
-    return approve_workflow(req, db)
+    return approve_workflow(req, db, current_user)
 
 # =======================================================
 # PHASE 4: HUMAN APPROVAL & AUDIT TRAIL WORKFLOWS
 # =======================================================
 
 @router.post("/approve-workflow", response_model=Dict[str, Any])
-def approve_workflow(req: schemas.ApprovalWorkflowRequest, db: Session = Depends(get_db)):
+def approve_workflow(
+    req: schemas.ApprovalWorkflowRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("CENTRAL_CONTROLLER", "SYSTEM_ADMIN"))
+):
     """
-    Phase 4 Formal Approval Workflow:
+    Formal Approval Workflow (Strict Central Controller Authorization):
+    - Verifies Central Controller role
     - Verifies safety gate
     - Generates SHA-256 HMAC cryptographic digital signature
-    - Commits audit log to DB
-    - Updates BlockPlan status
+    - Commits full audit log to DB
+    - Updates BlockPlan and linked MaintenanceRequest status
     """
     block = db.query(models.BlockPlan).filter(models.BlockPlan.block_code == req.block_code).first()
+    cfg = optimizer.SECTION_DETAILS.get(req.section_id, optimizer.SECTION_DETAILS[1])
     if not block:
         block = models.BlockPlan(
             block_code=req.block_code,
             section_id=req.section_id,
-            start_time="02:00",
-            end_time="05:00",
-            duration_minutes=180,
-            score=92,
-            train_impact_minutes=8,
+            start_time=cfg["start_time"],
+            end_time=cfg["end_time"],
+            duration_minutes=cfg["duration_minutes"],
+            score=cfg["score"],
+            train_impact_minutes=cfg["train_impact_minutes"],
             departments_count=3,
-            priority_jobs="2 high · 1 medium",
+            priority_jobs=cfg["priority_jobs"],
             safety_gate_passed=1,
-            rationale="Approved with verified multi-department corridor possession.",
+            rationale=cfg["rationale"],
             status=models.BlockStatusEnum.APPROVED
         )
         db.add(block)
     else:
         block.status = models.BlockStatusEnum.APPROVED
 
+    # Update any associated maintenance requests for this section
+    linked_requests = db.query(models.MaintenanceRequest).filter(
+        models.MaintenanceRequest.section_id == req.section_id,
+        models.MaintenanceRequest.status.in_([
+            models.RequestStatusEnum.UNDER_CONTROLLER_REVIEW,
+            models.RequestStatusEnum.RECOMMENDED,
+            models.RequestStatusEnum.SUBMITTED
+        ])
+    ).all()
+    for lr in linked_requests:
+        lr.status = models.RequestStatusEnum.APPROVED
+        lr.block_plan_id = block.id
+        from .notifications import create_notification
+        create_notification(
+            db=db,
+            title=f"Block Approved: {lr.request_number}",
+            message=f"Central Controller approved your {lr.work_type} block for {block.start_time}–{block.end_time} on Section #{req.section_id}.",
+            user_id=lr.created_by_id,
+            department_id=lr.department_id,
+            type="SUCCESS",
+            link="requests"
+        )
+
     # Cryptographic Digital Signature
     now = datetime.utcnow()
-    raw_sig = f"{req.block_code}:{req.performed_by}:{req.user_role}:{now.isoformat()}:{req.action}:CR-SEC-1"
+    performed_by_name = current_user.name if current_user else req.performed_by
+    user_role_str = current_user.role if current_user else req.user_role
+    raw_sig = f"{req.block_code}:{performed_by_name}:{user_role_str}:{now.isoformat()}:{req.action}:CR-SEC-1"
     dig_sig = hashlib.sha256(raw_sig.encode()).hexdigest()[:24].upper()
 
     # Snapshot of parameters
@@ -117,8 +188,14 @@ def approve_workflow(req: schemas.ApprovalWorkflowRequest, db: Session = Depends
     audit_entry = models.ApprovalAuditLog(
         block_code=req.block_code,
         action=req.action,
-        performed_by=req.performed_by,
-        user_role=req.user_role,
+        performed_by=performed_by_name,
+        user_role=user_role_str,
+        user_id=current_user.id if current_user else None,
+        department="Operations",
+        entity_type="BLOCK",
+        entity_id=req.block_code,
+        previous_state="PROPOSED",
+        new_state="APPROVED",
         timestamp=now,
         digital_signature=f"IR-SIG-{dig_sig}",
         remarks=req.remarks,
@@ -142,21 +219,56 @@ def approve_workflow(req: schemas.ApprovalWorkflowRequest, db: Session = Depends
     }
 
 @router.post("/reject-workflow", response_model=Dict[str, Any])
-def reject_workflow(req: schemas.ApprovalWorkflowRequest, db: Session = Depends(get_db)):
-    """Phase 4 Formal Rejection Workflow with audit logging."""
+def reject_workflow(
+    req: schemas.ApprovalWorkflowRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("CENTRAL_CONTROLLER", "SYSTEM_ADMIN"))
+):
+    """Formal Rejection Workflow with audit logging (Central Controller authority)."""
     block = db.query(models.BlockPlan).filter(models.BlockPlan.block_code == req.block_code).first()
     if block:
         block.status = models.BlockStatusEnum.REJECTED
 
+    # Update any associated maintenance requests
+    linked_requests = db.query(models.MaintenanceRequest).filter(
+        models.MaintenanceRequest.section_id == req.section_id,
+        models.MaintenanceRequest.status.in_([
+            models.RequestStatusEnum.UNDER_CONTROLLER_REVIEW,
+            models.RequestStatusEnum.RECOMMENDED,
+            models.RequestStatusEnum.SUBMITTED
+        ])
+    ).all()
+    for lr in linked_requests:
+        lr.status = models.RequestStatusEnum.REJECTED
+        lr.rejection_reason = req.remarks
+        from .notifications import create_notification
+        create_notification(
+            db=db,
+            title=f"Block Rejected: {lr.request_number}",
+            message=f"Central Controller rejected your {lr.work_type} block on Section #{req.section_id}. Remarks: {req.remarks}",
+            user_id=lr.created_by_id,
+            department_id=lr.department_id,
+            type="WARNING",
+            link="requests"
+        )
+
     now = datetime.utcnow()
-    raw_sig = f"{req.block_code}:{req.performed_by}:REJECTED:{now.isoformat()}"
+    performed_by_name = current_user.name if current_user else req.performed_by
+    user_role_str = current_user.role if current_user else req.user_role
+    raw_sig = f"{req.block_code}:{performed_by_name}:REJECTED:{now.isoformat()}"
     dig_sig = hashlib.sha256(raw_sig.encode()).hexdigest()[:24].upper()
 
     audit_entry = models.ApprovalAuditLog(
         block_code=req.block_code,
         action="REJECTED",
-        performed_by=req.performed_by,
-        user_role=req.user_role,
+        performed_by=performed_by_name,
+        user_role=user_role_str,
+        user_id=current_user.id if current_user else None,
+        department="Operations",
+        entity_type="BLOCK",
+        entity_id=req.block_code,
+        previous_state="PROPOSED",
+        new_state="REJECTED",
         timestamp=now,
         digital_signature=f"IR-SIG-{dig_sig}",
         remarks=req.remarks,
@@ -169,7 +281,7 @@ def reject_workflow(req: schemas.ApprovalWorkflowRequest, db: Session = Depends(
     return {
         "status": "REJECTED",
         "block_code": req.block_code,
-        "performed_by": req.performed_by,
+        "performed_by": performed_by_name,
         "digital_signature": audit_entry.digital_signature,
         "message": f"Block {req.block_code} rejected. Remarks logged to audit trail."
     }
@@ -222,12 +334,12 @@ def get_audit_trail(db: Session = Depends(get_db)):
     return logs
 
 # =======================================================
-# PHASE 4: EXPLAINABLE AI (XAI) & ML BLOCK RISK
+# PHASE 4: DECISION EXPLAINABILITY & ML BLOCK RISK
 # =======================================================
 
 @router.get("/explain-recommendation/{block_code}")
 def explain_recommendation(block_code: str, section_id: int = 1, db: Session = Depends(get_db)):
-    """Explainable AI (XAI) breakdown of block recommendation scoring and safety reasoning."""
+    """Breakdown of block recommendation scoring, attribution factors, and safety reasoning."""
     rec = optimizer.generate_corridor_recommendation(section_id, db)
     return ml_engine.explain_recommendation(
         block_code=block_code,
@@ -249,6 +361,6 @@ def predict_block_risk(req: schemas.MLBlockRiskRequest):
 
 @router.get("/feature-importance")
 def get_ml_feature_importance():
-    """Returns Explainable AI feature importance ranking from trained Scikit-learn model."""
+    """Returns feature importance ranking from trained Scikit-learn model."""
     return ml_engine.get_feature_importance()
 
